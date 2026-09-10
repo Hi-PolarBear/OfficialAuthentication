@@ -804,25 +804,6 @@ OfficialAuthentication/
 
 ---
 
-## 更新日志
-
-### 1.2.0
-
-- **Spigot 等不支持 `libraries` 的服务端也能自动使用 MySQL 驱动**：找不到驱动时自动从镜像下载到
-  `plugins/OfficialAuthentication/libs/` 并用独立类加载器加载；也支持手动把驱动丢进该目录（离线环境）
-- 新增**绑定状态**占位符：`%officialauth_bound%`（`✔已绑定` / `✘未绑定`）、`%officialauth_isbound%`（true/false）
-- 新增**正版认证服绑定成功提示**：屏幕中央标题 `✔正版账号绑定成功` + 聊天栏详细提示 + 可选音效
-  - 触发时机可配：`always` / `change`（首次或换绑）/ `once`
-  - 支持 `messages-new` / `messages-renamed` 场景化文案
-- 旧 ID 默认按离线处理（`placeholder.legacy-as-offline: true`）
-- 认证有效期默认关闭（`auth.expiry-enabled: false`），绑定一次永久有效
-- 占位符文案改为 emoji + 加粗样式（如 `✔正版`、`✘离线`）
-
-### 1.0.0
-
-- 首个版本：双模式（AUTH / MAIN）、账号-身份链、MySQL 存储、
-  PAPI 占位符、缓存与定时清理、`/zb` 与 `/oauth` 指令
-
 ---
 
 ## 许可
