@@ -1,0 +1,34 @@
+name: OfficialAuthentication
+description: 正版子服鉴权 + 主服识别展示 (账号-身份链版)
+version: '1.1.0'
+
+main: com.mention.officialAuthentication.OfficialAuthentication
+api-version: '1.21'
+load: POSTWORLD
+
+authors: [ Nice_Leo_ ]
+softdepend: [ PlaceholderAPI ]
+
+# Paper 服务端会自动下载 MySQL 驱动, 无需自己打包
+# Spigot / 其他端请把 mysql-connector-j 放进服务端 libraries 目录, 或自行 shade
+libraries:
+  - com.mysql:mysql-connector-j:8.4.0
+
+commands:
+  officialauth:
+    description: 正版认证管理指令
+    aliases: [ oauth, zbauth ]
+    usage: /officialauth help
+    permission: officialauth.admin
+    permission-message: 你没有权限执行该指令。
+
+permissions:
+  officialauth.admin:
+    description: 管理员指令(重载/查询/解绑/清理)
+    default: op
+  officialauth.zb:
+    description: 使用 /zb 指令查询自己的正版状态
+    default: true
+  officialauth.zb.others:
+    description: 使用 /zb <玩家> 查询他人
+    default: op
