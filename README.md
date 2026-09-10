@@ -1,5 +1,4 @@
 <img src="https://raw.githubusercontent.com/Hi-PolarBear/OfficialAuthentication/refs/heads/main/OfficialAuthentication.png" alt="OfficialAuthentication">
-<div align="center">
   
 
 > 主服离线模式（`online-mode: false`）也能**精准识别正版玩家**的解决方案。
