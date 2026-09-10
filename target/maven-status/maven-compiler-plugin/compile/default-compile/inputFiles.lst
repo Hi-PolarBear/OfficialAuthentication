@@ -5,11 +5,14 @@ E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthenticatio
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\config\AuthConfig.java
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\config\ServerMode.java
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\db\AuthRepository.java
+E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\db\ConnectionFactory.java
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\db\DatabaseManager.java
+E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\db\LibraryLoader.java
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\db\SimpleConnectionPool.java
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\listener\PlayerListener.java
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\model\AuthResult.java
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\model\AuthStatus.java
+E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\model\BindResult.java
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\model\NameEntry.java
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\OfficialAuthentication.java
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\papi\OfficialAuthExpansion.java
@@ -18,4 +21,5 @@ E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthenticatio
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\util\Msg.java
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\util\PapiBridge.java
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\util\PlaceholderValues.java
+E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\util\SoundPlayer.java
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\util\TimeUtil.java

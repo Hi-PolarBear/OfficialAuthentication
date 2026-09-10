@@ -3,6 +3,7 @@ package com.mention.officialAuthentication.db;
 import com.mention.officialAuthentication.config.AuthConfig;
 import com.mention.officialAuthentication.model.AuthResult;
 import com.mention.officialAuthentication.model.AuthStatus;
+import com.mention.officialAuthentication.model.BindResult;
 import com.mention.officialAuthentication.model.NameEntry;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -160,31 +161,33 @@ public final class AuthRepository {
     //  正版服：写入 / 覆盖更新
     // =========================================================
 
-    public CompletableFuture<Boolean> recordAuthentication(UUID realUuid, String name) {
+    /**
+     * 覆盖更新认证记录，返回本次绑定的详情（首次绑定 / 改名换绑等），用于给玩家发送提示。
+     */
+    public CompletableFuture<BindResult> recordAuthentication(UUID realUuid, String name) {
         return CompletableFuture.supplyAsync(() -> {
             if (!canWrite()) {
                 plugin.getLogger().warning("主服模式禁止写入认证数据, 已忽略玩家 " + name + " 的认证请求。"
                         + "(如需主服也可写入, 请设置 auth.allow-main-write: true)");
-                return false;
+                return BindResult.failure("当前为只读模式");
             }
             if (!config.featureAuthRecord) {
                 debug("features.auth-record = false, 已跳过写入 " + name);
-                return false;
+                return BindResult.failure("认证写库功能已关闭");
             }
             for (int attempt = 1; attempt <= 2; attempt++) {
                 try {
-                    doRecord(realUuid, name);
-                    return true;
+                    return doRecord(realUuid, name);
                 } catch (SQLException ex) {
                     if (attempt == 1 && isRetryable(ex)) {
                         debug("写入出现可重试错误, 正在重试: " + ex.getMessage());
                         continue;
                     }
                     plugin.getLogger().log(Level.WARNING, "写入玩家 " + name + " 的认证信息失败: " + ex.getMessage());
-                    return false;
+                    return BindResult.failure(ex.getMessage());
                 }
             }
-            return false;
+            return BindResult.failure("未知错误");
         }, executor);
     }
 
@@ -196,92 +199,15 @@ public final class AuthRepository {
         return code == 1213 || code == 1205 || ex instanceof java.sql.SQLTransientException;
     }
 
-    /**
-     * 覆盖更新认证记录（事务）：
-     * <ol>
-     *     <li>若该昵称目前归属另一个身份 -> 原身份释放该昵称（RELEASE）</li>
-     *     <li>若本身份改名 -> 旧昵称行标记 active=0（RENAME）</li>
-     *     <li>身份表按 real_uuid upsert，昵称表按小写昵称 upsert</li>
-     * </ol>
-     */
-    private void doRecord(UUID realUuid, String name) throws SQLException {
-        final String uuid = realUuid.toString();
-        final String lower = name.toLowerCase(Locale.ROOT);
-        final long now = System.currentTimeMillis();
-
+    private BindResult doRecord(UUID realUuid, String name) throws SQLException {
         Connection connection = null;
         try {
             connection = db.borrow();
             connection.setAutoCommit(false);
+            BindResult result;
             try {
-                // 1) 该昵称当前归谁
-                String owner = queryString(connection,
-                        "SELECT real_uuid FROM " + db.table("names") + " WHERE name_lower = ? FOR UPDATE", lower);
-
-                // 2) 本身份上一次使用的昵称
-                String previous = queryString(connection,
-                        "SELECT current_name_lower FROM " + db.table("identities") + " WHERE real_uuid = ? FOR UPDATE", uuid);
-
-                if (owner != null && !owner.equals(uuid)) {
-                    // 昵称被别的身份占用（对方改名或账号易手）—— 抢占
-                    String ownerCurrent = queryString(connection,
-                            "SELECT current_name_lower FROM " + db.table("identities") + " WHERE real_uuid = ?", owner);
-                    if (lower.equals(ownerCurrent)) {
-                        update(connection, "UPDATE " + db.table("identities")
-                                        + " SET current_name = NULL, current_name_lower = NULL"
-                                        + " WHERE real_uuid = ? AND current_name_lower = ?",
-                                owner, lower);
-                    }
-                    update(connection, "UPDATE " + db.table("names")
-                                    + " SET active = 0, detached_at = ? WHERE name_lower = ? AND active = 1",
-                            now, lower);
-                    insertHistory(connection, owner, lower, null, EVENT_RELEASE, now);
-                    debug("昵称 " + lower + " 从身份 " + owner + " 转移到 " + uuid);
-                }
-
-                if (previous != null && !previous.equals(lower)) {
-                    if (!config.featureNameChain) {
-                        // 关闭身份链 / 改名追踪: 直接忘掉旧昵称（旧ID 不再保留任何记录）
-                        update(connection, "DELETE FROM " + db.table("names")
-                                + " WHERE real_uuid = ? AND name_lower <> ?", uuid, lower);
-                        debug("features.name-chain = false, 已移除 " + uuid + " 的旧昵称记录");
-                    } else if (config.featureLegacyInvalidate) {
-                        // 本身份改名：旧昵称不再占用正版身份，但保留在昵称链里
-                        update(connection, "UPDATE " + db.table("names")
-                                        + " SET active = 0, detached_at = ? WHERE name_lower = ? AND active = 1",
-                                now, previous);
-                    }
-                    insertHistory(connection, uuid, previous, null, EVENT_RENAME, now);
-                    debug("身份 " + uuid + " 改名: " + previous + " -> " + lower);
-                }
-
-                // 3) 身份表（以正版 UUID 为根，唯一）
-                update(connection,
-                        "INSERT INTO " + db.table("identities")
-                                + " (real_uuid, current_name, current_name_lower, first_auth, last_auth)"
-                                + " VALUES (?, ?, ?, ?, ?)"
-                                + " ON DUPLICATE KEY UPDATE current_name = VALUES(current_name),"
-                                + " current_name_lower = VALUES(current_name_lower), last_auth = VALUES(last_auth)",
-                        uuid, name, lower, now, now);
-
-                // 4) 昵称表（以昵称为键；被别人占用时重置首次记录时间）
-                update(connection,
-                        "INSERT INTO " + db.table("names")
-                                + " (name_lower, name_display, real_uuid, first_seen, last_seen, active, detached_at)"
-                                + " VALUES (?, ?, ?, ?, ?, 1, NULL)"
-                                + " ON DUPLICATE KEY UPDATE"
-                                + " first_seen = IF(real_uuid = VALUES(real_uuid), first_seen, VALUES(first_seen)),"
-                                + " name_display = VALUES(name_display),"
-                                + " real_uuid = VALUES(real_uuid),"
-                                + " last_seen = VALUES(last_seen),"
-                                + " active = 1,"
-                                + " detached_at = NULL",
-                        lower, name, uuid, now, now);
-
-                insertHistory(connection, uuid, lower, name, EVENT_AUTH, now);
-
+                result = doRecordTransactional(connection, realUuid, name);
                 connection.commit();
-                debug("认证写入成功: " + name + " (" + uuid + ")");
             } catch (SQLException ex) {
                 safeRollback(connection);
                 throw ex;
@@ -292,9 +218,105 @@ public final class AuthRepository {
                     // 交由连接池在回收时处理
                 }
             }
+            return result;
         } finally {
             db.release(connection);
         }
+    }
+
+    /**
+     * 事务内的实际写入逻辑（调用方负责 commit / rollback）：
+     * <ol>
+     *     <li>若该昵称目前归属另一个身份 -> 原身份释放该昵称（RELEASE）</li>
+     *     <li>若本身份改名 -> 旧昵称行标记 active=0（RENAME）</li>
+     *     <li>身份表按 real_uuid upsert，昵称表按小写昵称 upsert</li>
+     * </ol>
+     */
+    private BindResult doRecordTransactional(Connection connection, UUID realUuid, String name) throws SQLException {
+        final String uuid = realUuid.toString();
+        final String lower = name.toLowerCase(Locale.ROOT);
+        final long now = System.currentTimeMillis();
+
+        // 1) 该昵称当前归谁
+        String owner = queryString(connection,
+                "SELECT real_uuid FROM " + db.table("names") + " WHERE name_lower = ? FOR UPDATE", lower);
+
+        // 2) 本身份是否已存在、上一次使用的昵称
+        boolean exists = false;
+        String previous = null;
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT current_name_lower FROM " + db.table("identities") + " WHERE real_uuid = ? FOR UPDATE")) {
+            statement.setQueryTimeout(config.queryTimeoutSeconds);
+            statement.setString(1, uuid);
+            try (ResultSet rs = statement.executeQuery()) {
+                if (rs.next()) {
+                    exists = true;
+                    previous = rs.getString(1);
+                }
+            }
+        }
+
+        if (owner != null && !owner.equals(uuid)) {
+            // 昵称被别的身份占用（对方改名或账号易手）—— 抢占
+            String ownerCurrent = queryString(connection,
+                    "SELECT current_name_lower FROM " + db.table("identities") + " WHERE real_uuid = ?", owner);
+            if (lower.equals(ownerCurrent)) {
+                update(connection, "UPDATE " + db.table("identities")
+                                + " SET current_name = NULL, current_name_lower = NULL"
+                                + " WHERE real_uuid = ? AND current_name_lower = ?",
+                        owner, lower);
+            }
+            update(connection, "UPDATE " + db.table("names")
+                            + " SET active = 0, detached_at = ? WHERE name_lower = ? AND active = 1",
+                    now, lower);
+            insertHistory(connection, owner, lower, null, EVENT_RELEASE, now);
+            debug("昵称 " + lower + " 从身份 " + owner + " 转移到 " + uuid);
+        }
+
+        if (previous != null && !previous.equals(lower)) {
+            if (!config.featureNameChain) {
+                // 关闭身份链 / 改名追踪：直接忘掉旧昵称（旧 ID 不再保留任何记录）
+                update(connection, "DELETE FROM " + db.table("names")
+                        + " WHERE real_uuid = ? AND name_lower <> ?", uuid, lower);
+                debug("features.name-chain = false, 已移除 " + uuid + " 的旧昵称记录");
+            } else if (config.featureLegacyInvalidate) {
+                // 本身份改名：旧昵称不再占用正版身份，但保留在昵称链里
+                update(connection, "UPDATE " + db.table("names")
+                                + " SET active = 0, detached_at = ? WHERE name_lower = ? AND active = 1",
+                        now, previous);
+            }
+            insertHistory(connection, uuid, previous, null, EVENT_RENAME, now);
+            debug("身份 " + uuid + " 改名: " + previous + " -> " + lower);
+        }
+
+        // 3) 身份表（以正版 UUID 为根，唯一）
+        update(connection,
+                "INSERT INTO " + db.table("identities")
+                        + " (real_uuid, current_name, current_name_lower, first_auth, last_auth)"
+                        + " VALUES (?, ?, ?, ?, ?)"
+                        + " ON DUPLICATE KEY UPDATE current_name = VALUES(current_name),"
+                        + " current_name_lower = VALUES(current_name_lower), last_auth = VALUES(last_auth)",
+                uuid, name, lower, now, now);
+
+        // 4) 昵称表（以昵称为键；被别人占用时重置首次记录时间）
+        update(connection,
+                "INSERT INTO " + db.table("names")
+                        + " (name_lower, name_display, real_uuid, first_seen, last_seen, active, detached_at)"
+                        + " VALUES (?, ?, ?, ?, ?, 1, NULL)"
+                        + " ON DUPLICATE KEY UPDATE"
+                        + " first_seen = IF(real_uuid = VALUES(real_uuid), first_seen, VALUES(first_seen)),"
+                        + " name_display = VALUES(name_display),"
+                        + " real_uuid = VALUES(real_uuid),"
+                        + " last_seen = VALUES(last_seen),"
+                        + " active = 1,"
+                        + " detached_at = NULL",
+                lower, name, uuid, now, now);
+
+        insertHistory(connection, uuid, lower, name, EVENT_AUTH, now);
+        debug("认证写入成功: " + name + " (" + uuid + "), 首次绑定=" + !exists
+                + ", 改名=" + (previous != null && !previous.equals(lower)));
+
+        return BindResult.success(!exists, previous != null && !previous.equals(lower), name, previous, uuid, now);
     }
 
     // =========================================================

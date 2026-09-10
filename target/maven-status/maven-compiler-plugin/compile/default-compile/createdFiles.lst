@@ -1,4 +1,6 @@
+com\mention\officialAuthentication\db\ConnectionFactory.class
 com\mention\officialAuthentication\db\SimpleConnectionPool.class
+com\mention\officialAuthentication\db\LibraryLoader.class
 com\mention\officialAuthentication\util\Msg.class
 com\mention\officialAuthentication\config\AuthConfig.class
 com\mention\officialAuthentication\OfficialAuthentication$1.class
@@ -13,7 +15,9 @@ com\mention\officialAuthentication\model\NameEntry.class
 com\mention\officialAuthentication\db\AuthRepository.class
 com\mention\officialAuthentication\listener\PlayerListener.class
 com\mention\officialAuthentication\util\ColorUtil.class
+com\mention\officialAuthentication\model\BindResult.class
 com\mention\officialAuthentication\util\PapiBridge.class
+com\mention\officialAuthentication\util\SoundPlayer.class
 com\mention\officialAuthentication\db\DatabaseManager.class
 com\mention\officialAuthentication\model\AuthResult.class
 com\mention\officialAuthentication\papi\OfficialAuthExpansion.class

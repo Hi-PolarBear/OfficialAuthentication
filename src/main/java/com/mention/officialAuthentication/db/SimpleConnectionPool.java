@@ -1,7 +1,6 @@
 package com.mention.officialAuthentication.db;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,12 +13,13 @@ import java.util.logging.Logger;
 
 /**
  * 轻量连接池：避免每次查询都新建 MySQL 连接，也不需要额外的第三方依赖。
+ *
+ * <p>连接的实际创建方式由 {@link ConnectionFactory} 决定，因此既支持服务端自带驱动，
+ * 也支持插件自行下载后加载的驱动。</p>
  */
 public final class SimpleConnectionPool {
 
-    private final String url;
-    private final String user;
-    private final String password;
+    private final ConnectionFactory factory;
     private final int maxSize;
     private final long borrowTimeoutMs;
     private final Logger logger;
@@ -28,11 +28,8 @@ public final class SimpleConnectionPool {
     private final AtomicInteger created = new AtomicInteger();
     private volatile boolean closed;
 
-    public SimpleConnectionPool(String url, String user, String password, int maxSize,
-                                long borrowTimeoutMs, Logger logger) {
-        this.url = url;
-        this.user = user;
-        this.password = password;
+    public SimpleConnectionPool(ConnectionFactory factory, int maxSize, long borrowTimeoutMs, Logger logger) {
+        this.factory = factory;
         this.maxSize = Math.max(1, maxSize);
         this.borrowTimeoutMs = borrowTimeoutMs;
         this.logger = logger;
@@ -112,7 +109,7 @@ public final class SimpleConnectionPool {
     }
 
     private Connection open() throws SQLException {
-        return DriverManager.getConnection(url, user, password);
+        return factory.open();
     }
 
     private boolean isUsable(Connection connection) {

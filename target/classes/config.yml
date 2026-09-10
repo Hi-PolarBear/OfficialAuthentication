@@ -98,6 +98,24 @@ database:
   # 启动时自动建表
   create-tables-on-start: true
 
+  # ---------- MySQL 驱动自动加载 ----------
+  # Paper 会通过 plugin.yml 的 libraries 自动下载驱动;
+  # 如果服务端里找不到驱动(例如 Spigot), 插件会自动下载到
+  # plugins/OfficialAuthentication/libs/ 并加载, 无需手动改服务端。
+  driver:
+    # 是否允许自动下载(仅当服务端里找不到驱动时才下载)
+    auto-download: true
+    # 驱动版本
+    version: '8.4.0'
+    # 下载仓库, 按顺序尝试直到成功; 也可以加自己的私服仓库
+    repositories:
+      - 'https://maven.aliyun.com/repository/public'
+      - 'https://repo1.maven.org/maven2'
+    # 下载超时(毫秒)
+    timeout-ms: 15000
+    # 提示: 也可以自己把一个 mysql-connector-j-x.x.x.jar 丢进 libs 目录,
+    #       插件会自动加载该目录下的所有 jar, 无需联网
+
 auth:
   # 【开关】认证有效期 / 过期重新认证
   #   false (默认, 推荐) = 绑定一次永久有效:
@@ -142,6 +160,69 @@ cleanup:
   # 事件历史保留天数 (0 = 永久保留)
   history-retain-days: 180
 
+# ============================================================
+#  正版认证服: 认证(绑定)成功时的提示
+#  仅当 server.mode: AUTH 且本次写库成功时触发
+# ============================================================
+bind-notify:
+  enabled: true
+  # 触发时机:
+  #   always = 每次成功认证都提示 (默认)
+  #   change = 首次绑定 或 换绑(改名) 时才提示
+  #   once   = 只在首次绑定时提示
+  mode: always
+
+  # ---------- 屏幕中央标题(横屏大字) ----------
+  # 留空则不显示; 可用下面 messages 里的所有占位符
+  title: '&#33DD66&l✔正版账号绑定成功'
+  # 副标题(标题下方小字), 留空则不显示
+  subtitle: '&#FFFFFF%player% &8· &7主服将显示 %status%'
+  # 显示时间(tick, 20 tick = 1 秒): 淡入 / 停留 / 淡出
+  fade-in: 10
+  stay: 50
+  fade-out: 10
+
+  # ---------- 聊天栏提示 ----------
+  # 一行一条, 空行忽略; 颜色支持 &#RRGGBB 与 &a &l 等
+  # 可用占位符:
+  #   %player%        本次绑定的 ID
+  #   %real_uuid%     正版原生 UUID          %uuid%        正版 UUID(离线的为离线 UUID)
+  #   %current_name%  当前绑定昵称          %previous_name% 换绑前的旧 ID(无则 -)
+  #   %status%        主服会显示的状态(✔正版)  %bound%       绑定状态(✔已绑定)
+  #   %bind_time%     绑定时间              %bind_state%   首次绑定/换绑/刷新认证
+  #   %first_bind%    true/false(是否首次)  %renamed%      true/false(是否换绑)
+  #   %expire_in%     有效期剩余            %names%        昵称链
+  #   以及 PlaceholderAPI 占位符(如 %officialauth_status%)
+  messages:
+    - '&#00E5FF&m                                                  &r'
+    - '&#33DD66&l✔ 正版账号绑定成功'
+    - '&#8C8C8C▎ &#FFFFFF你已绑定 &#00E5FF%player% &#FFFFFF为正版账号'
+    - '&#8C8C8C▎ &#FFFFFF正版UUID: &#8C8C8C%real_uuid%'
+    - '&#8C8C8C▎ &#FFFFFF绑定时间: &#8C8C8C%bind_time% &#8C8C8C(%bind_state%)'
+    - '&#8C8C8C▎ &#FFFFFF绑定状态: %bound% &#8C8C8C| 主服标识: %status%'
+    - '&#8C8C8C▎ &#8C8C8C以后进入主服会自动显示正版标识, 无需重复认证'
+    - '&#00E5FF&m                                                  &r'
+
+  # 可选: 首次绑定 / 换绑时使用不同文案(留空则用上面的 messages)
+  # messages-new:
+  #   - '&#00E5FF&m                                                  &r'
+  #   - '&#33DD66&l✔ 首次绑定成功'
+  #   - '&#8C8C8C▎ &#FFFFFF欢迎 &#00E5FF%player%&#FFFFFF, 你已成为正版玩家'
+  #   - '&#8C8C8C▎ &#FFFFFF正版UUID: &#8C8C8C%real_uuid%'
+  #   - '&#00E5FF&m                                                  &r'
+  #
+  # messages-renamed:
+  #   - '&#00E5FF&m                                                  &r'
+  #   - '&#33DD66&l✔ 换绑成功'
+  #   - '&#8C8C8C▎ &#FFFFFF旧 ID: &#8C8C8C%previous_name% &8-> &#FFFFFF新 ID: &#00E5FF%player%'
+  #   - '&#8C8C8C▎ &#8C8C8C旧 ID 已变为离线, 请使用新 ID 游玩'
+  #   - '&#00E5FF&m                                                  &r'
+
+  # 音效(留空则不播放), 支持 entity.player.levelup 或 ENTITY_PLAYER_LEVELUP 两种写法
+  sound: 'ENTITY_PLAYER_LEVELUP'
+  sound-volume: 1.0
+  sound-pitch: 1.2
+
 # ---------------- PAPI 占位符文案 ----------------
 placeholder:
   # 【开关】玩家改名后, 旧 ID 是否直接当作「离线玩家」处理
@@ -167,6 +248,10 @@ placeholder:
   offline: '&#9E9E9E&l✘离线'
   # 正在查询
   pending: '&#FFD700&l…查询中'
+  # 绑定状态 (%officialauth_bound%): 该昵称是否已绑定过正版账号
+  #   已过期也算「已绑定」; 从未认证过 / 旧昵称(按离线处理) 显示未绑定
+  bound: '&#33DD66&l✔已绑定'
+  unbound: '&#9E9E9E&l✘未绑定'
   # 布尔占位符输出
   true-value: 'true'
   false-value: 'false'

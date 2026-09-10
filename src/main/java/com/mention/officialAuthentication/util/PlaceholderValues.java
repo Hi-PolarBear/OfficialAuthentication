@@ -103,6 +103,27 @@ public final class PlaceholderValues {
         return result.isKnown() ? config.boolTrue : config.boolFalse;
     }
 
+    /**
+     * 该昵称是否已经绑定过正版账号。
+     * 已过期也算「已绑定」，只有从未认证 / 旧昵称（按离线处理）才是未绑定。
+     */
+    public static boolean isBound(AuthConfig config, AuthResult result) {
+        if (result == null || legacyAsOffline(config, result)) {
+            return false;
+        }
+        return result.getStatus() == AuthStatus.PREMIUM || result.getStatus() == AuthStatus.EXPIRED;
+    }
+
+    /** 绑定状态文本：✔已绑定 / ✘未绑定 */
+    public static String boundText(AuthConfig config, AuthResult result) {
+        return isBound(config, result) ? config.textBound : config.textUnbound;
+    }
+
+    /** 绑定状态布尔值 */
+    public static String boundBoolText(AuthConfig config, AuthResult result) {
+        return isBound(config, result) ? config.boolTrue : config.boolFalse;
+    }
+
     public static String realUuid(AuthConfig config, AuthResult result) {
         if (result == null || legacyAsOffline(config, result) || result.getRealUuid() == null) {
             return "";
@@ -203,6 +224,8 @@ public final class PlaceholderValues {
         values.put("status", statusText(config, result, loading));
         values.put("bool", boolText(config, result));
         values.put("known", knownText(config, result));
+        values.put("bound", boundText(config, result));
+        values.put("is_bound", boundBoolText(config, result));
         String real = realUuid(config, result);
         values.put("real_uuid", real.isEmpty() ? "-" : real);
         values.put("uuid", uuid(config, result, playerName));

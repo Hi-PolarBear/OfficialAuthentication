@@ -4,13 +4,23 @@ import com.mention.officialAuthentication.config.AuthConfig;
 import com.mention.officialAuthentication.util.Console;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.File;
 import java.sql.Connection;
+import java.sql.Driver;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Properties;
 import java.util.logging.Level;
 
 /**
- * 数据库模块：建表 / 连接池管理。
+ * 数据库模块：驱动解析 / 连接池管理 / 自动建表。
+ *
+ * <p>驱动获取顺序：</p>
+ * <ol>
+ *     <li>服务端已有驱动（Paper 的 {@code libraries}、或手动放进服务端）-> DriverManager</li>
+ *     <li>插件 libs 目录 / 自动下载（Spigot 等环境同样开箱即用）-> 直接使用驱动实例</li>
+ * </ol>
  *
  * <p>表结构（前缀由配置决定，默认 officialauth_）：</p>
  * <ul>
@@ -33,27 +43,13 @@ public final class DatabaseManager {
     public synchronized void init() throws Exception {
         close();
 
-        String driver = null;
-        for (String candidate : new String[]{"com.mysql.cj.jdbc.Driver", "com.mysql.jdbc.Driver"}) {
-            try {
-                Class.forName(candidate);
-                driver = candidate;
-                break;
-            } catch (ClassNotFoundException ignored) {
-                // 继续尝试下一个
-            }
-        }
-        if (driver == null) {
-            throw new IllegalStateException("未找到 MySQL 驱动。Paper 端请在 plugin.yml 的 libraries 中加入 "
-                    + "com.mysql:mysql-connector-j:8.4.0；其他端请把 mysql-connector-j 放进服务端。");
-        }
-
         String url = "jdbc:mysql://" + config.dbHost + ":" + config.dbPort + "/" + config.dbName
                 + "?useUnicode=true&characterEncoding=utf8"
                 + (config.extraParams.isEmpty() ? "" : "&" + config.extraParams);
 
-        this.pool = new SimpleConnectionPool(url, config.dbUser, config.dbPassword,
-                config.poolSize, config.connectionTimeoutMs, plugin.getLogger());
+        ConnectionFactory factory = resolveFactory(url);
+
+        this.pool = new SimpleConnectionPool(factory, config.poolSize, config.connectionTimeoutMs, plugin.getLogger());
 
         try (Connection connection = pool.borrow()) {
             if (connection == null) {
@@ -68,6 +64,38 @@ public final class DatabaseManager {
         plugin.getLogger().info(Console.color("&#00E5FF[正版认证] &#FFFFFFMySQL 连接成功 &#8C8C8C-> &f"
                 + config.dbHost + ":" + config.dbPort + "/" + config.dbName
                 + " &#8C8C8C(表前缀: &f" + config.tablePrefix + "&#8C8C8C)"));
+    }
+
+    /**
+     * 解析出可用的连接创建方式：优先服务端自带驱动，其次插件自带的 libs / 自动下载。
+     */
+    private ConnectionFactory resolveFactory(String url) throws Exception {
+        if (loadDriverClass("com.mysql.cj.jdbc.Driver") || loadDriverClass("com.mysql.jdbc.Driver")) {
+            plugin.getLogger().info(Console.color("&#00E5FF[正版认证] &#FFFFFF使用服务端自带的 MySQL 驱动"));
+            return () -> DriverManager.getConnection(url, config.dbUser, config.dbPassword);
+        }
+
+        Driver driver = LibraryLoader.loadMySqlDriver(new File(plugin.getDataFolder(), "libs"),
+                plugin.getLogger(), plugin.getDescription().getVersion(), config, url);
+        Properties properties = new Properties();
+        properties.setProperty("user", config.dbUser);
+        properties.setProperty("password", config.dbPassword);
+        return () -> {
+            Connection connection = driver.connect(url, properties);
+            if (connection == null) {
+                throw new SQLException("MySQL 驱动无法处理该连接地址: " + url);
+            }
+            return connection;
+        };
+    }
+
+    private boolean loadDriverClass(String className) {
+        try {
+            Class.forName(className);
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
     public boolean isReady() {

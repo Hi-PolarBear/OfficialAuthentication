@@ -1,5 +1,3 @@
-[![Title](https://camo.githubusercontent.com/ff5b06ad7c6c8f45b6700fe35baffc517708189ac104621d60f5f9e0142685d8/68747470733a2f2f63646e2e6a7364656c6976722e6e65742f67682f73756e3032323553554e2f73756e3032323553554e2f6173736574732f696d616765732f69636f6e2e706e67)](#)
-
 # OfficialAuthentication
 
 > 主服离线模式（`online-mode: false`）也能**精准识别正版玩家**的解决方案。
@@ -34,9 +32,10 @@
   - [3.3 功能开关](#33-功能开关)
   - [3.4 指令](#34-指令)
   - [3.5 占位符](#35-占位符)
-  - [3.6 场景示例](#36-场景示例)
-  - [3.7 常见问题](#37-常见问题)
-  - [3.8 排错指南](#38-排错指南)
+  - [3.6 认证成功提示（正版认证服）](#36-认证成功提示正版认证服)
+  - [3.7 场景示例](#37-场景示例)
+  - [3.8 常见问题](#38-常见问题)
+  - [3.9 排错指南](#39-排错指南)
 - [四、构建与开发](#四构建与开发)
 - [五、项目结构](#五项目结构)
 
@@ -78,6 +77,8 @@ Minecraft 服务端 `online-mode: false` 时不会向微软验证账号，所有
 - **旧 ID 直接当离线**：改名后旧 ID 的占位符与陌生玩家完全一致，不泄露原身份信息
 - **绑定一次永久有效**：默认不做过期判定，不需要定期回正版服重新认证
 - **换 ID 即换绑**：用新 ID 进一次正版服，新 ID 自动绑定、旧 ID 自动变离线
+- **绑定状态占位符**：`%officialauth_bound%` 输出 `✔已绑定` / `✘未绑定`，可用于区分「从未绑定」与「已绑定」
+- **认证成功提示**：正版服绑定成功后弹出横屏标题 `✔正版账号绑定成功` + 聊天栏详细提示 + 音效，文案全可配置
 - **全异步**：所有数据库操作都在独立线程池，主线程零阻塞；登录前异步预查询
 - **三级缓存 + 定时清理**：正版/离线/错误分别设 TTL，退服清缓存，定时清历史流水
 - **数据源唯一可信**：只有正版服能写库，主服强制只读（连清理、解绑命令都拒绝）
@@ -304,7 +305,7 @@ sequenceDiagram
 
 ```
 ============================================================
-  OfficialAuthentication v1.0.0   正版认证 · 主服识别
+  OfficialAuthentication v1.2.0   正版认证 · 主服识别
   服务器: Paper 1.21.11 | 运行模式: AUTH (正版认证服 · 唯一写库)
   online-mode: true | 数据库: 已连接 (127.0.0.1:3306/minecraft)
   认证有效期: 永久有效(不过期) | PlaceholderAPI: 已加载 | /zb 指令: /zb
@@ -313,8 +314,41 @@ sequenceDiagram
 ============================================================
 ```
 
-> **MySQL 驱动**：Paper 端由 `plugin.yml` 的 `libraries` 自动下载 `mysql-connector-j`。
-> Spigot 等其他端请自行把驱动放进服务端，或自行 shade。
+> **MySQL 驱动无需手动配置**：
+> Paper 会用 `plugin.yml` 的 `libraries` 自动下载；
+> Spigot 或其他不支持 `libraries` 的服务端，**插件会自己把 `mysql-connector-j` 下载到
+> `plugins/OfficialAuthentication/libs/` 并加载**，同样开箱即用。
+> 若服务器完全无法联网，手动把 `mysql-connector-j-x.x.x.jar` 放进该 `libs` 目录即可（插件会加载目录下所有 jar）。
+
+### MySQL 驱动（插件自动处理）
+
+不管用什么服务端，都**不需要手动改服务端配置**：
+
+| 服务端 | 行为 |
+|---|---|
+| Paper | 由 `plugin.yml` 的 `libraries` 自动下载（首选） |
+| Spigot / 其他 | 插件自己下载到 `plugins/OfficialAuthentication/libs/`，用独立类加载器加载 |
+| 完全离线 | 手动把 `mysql-connector-j-x.x.x.jar` 放进该 `libs` 目录即可（目录下所有 jar 都会被加载） |
+
+```yaml
+database:
+  driver:
+    auto-download: true                                  # 服务端里找不到驱动时自动下载
+    version: '8.4.0'
+    repositories:                                        # 按顺序尝试
+      - 'https://maven.aliyun.com/repository/public'
+      - 'https://repo1.maven.org/maven2'
+    timeout-ms: 15000
+```
+
+启动日志会明确告诉你走的哪种方式：
+
+```
+[正版认证] 使用服务端自带的 MySQL 驱动
+[正版认证] 正在下载 MySQL 驱动: https://maven.aliyun.com/.../mysql-connector-j-8.4.0.jar
+[正版认证] MySQL 驱动下载完成: plugins/OfficialAuthentication/libs/mysql-connector-j-8.4.0.jar
+已加载插件自带 MySQL 驱动: com.mysql.cj.jdbc.Driver (8.4)
+```
 
 ### 验收清单
 
@@ -349,6 +383,15 @@ database:
   connection-timeout-ms: 5000     # 获取连接超时
   extra-params: 'useSSL=false&characterEncoding=utf8&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai'
   create-tables-on-start: true    # 启动时自动建表
+
+  # MySQL 驱动自动加载（Spigot 等不支持 libraries 的服务端同样可用）
+  driver:
+    auto-download: true           # 服务端里找不到驱动时自动下载
+    version: '8.4.0'
+    repositories:                 # 按顺序尝试直到成功
+      - 'https://maven.aliyun.com/repository/public'
+      - 'https://repo1.maven.org/maven2'
+    timeout-ms: 15000
 ```
 
 ### auth
@@ -424,6 +467,7 @@ placeholder:
   | `%player%` | 被查询玩家名 |
   | `%status%` | 状态文本（带颜色，如 `✔正版`） |
   | `%bool%` / `%known%` | true / false |
+  | `%bound%` / `%is_bound%` | 绑定状态：✔已绑定 / ✘未绑定 · true/false |
   | `%real_uuid%` / `%uuid%` / `%offline_uuid%` | 正版UUID / 正版或离线UUID / 离线UUID |
   | `%current_name%` | 该正版身份当前昵称 |
   | `%last_auth%` / `%first_auth%` | 最后 / 首次认证时间 |
@@ -479,6 +523,8 @@ command:
 | `%officialauth_bool%` | `true` / `false`（只有正版为 true） |
 | `%officialauth_ispremium%` | 同 `_bool%` |
 | `%officialauth_known%` | 数据库里是否存在该昵称的记录 |
+| `%officialauth_bound%` | **绑定状态**：`&#33DD66&l✔已绑定` / `&#9E9E9E&l✘未绑定`（已过期也算已绑定） |
+| `%officialauth_isbound%` | 绑定状态布尔值 `true` / `false`（别名 `_is_bound%`、`_bound_bool%`） |
 | `%officialauth_real_uuid%` | 正版原生 UUID（离线玩家为空） |
 | `%officialauth_uuid%` | 正版 UUID；离线玩家返回离线 UUID |
 | `%officialauth_offline_uuid%` | 该昵称计算的离线 UUID |
@@ -511,12 +557,70 @@ placeholder:
   former:  '&#8C8C8C&l✘旧昵称'
   offline: '&#9E9E9E&l✘离线'
   pending: '&#FFD700&l…查询中'
+  bound:   '&#33DD66&l✔已绑定'    # %officialauth_bound%
+  unbound: '&#9E9E9E&l✘未绑定'
 ```
 
 > 若某个插件不兼容 `§x§R§R§G§G§B§B` 旧版十六进制形式，把文案换成 `&a&l✔正版` 即可。
 > 若客户端字体显示不出 emoji，可换成 `√` `×` 或纯文字。
 
-## 3.6 场景示例
+## 3.6 认证成功提示（正版认证服）
+
+玩家在正版认证服**成功完成绑定**（写库成功）后，插件会自动发送：
+
+1. **屏幕中央标题（横屏大字）**：`&#33DD66&l✔正版账号绑定成功`
+2. **聊天栏提示**（可自定义多行、含 UUID / 时间 / 绑定状态等信息）
+3. **音效**（可关闭）
+
+```yaml
+bind-notify:
+  enabled: true
+  # always = 每次成功认证都提示 / change = 首次绑定或换绑 / once = 仅首次绑定
+  mode: always
+
+  # 屏幕中央标题，留空不显示
+  title: '&#33DD66&l✔正版账号绑定成功'
+  subtitle: '&#FFFFFF%player% &8· &7主服将显示 %status%'
+  fade-in: 10     # 淡入 tick (20 tick = 1 秒)
+  stay: 50        # 停留 tick
+  fade-out: 10    # 淡出 tick
+
+  # 聊天栏消息，一行一条
+  messages:
+    - '&#00E5FF&m                                                  &r'
+    - '&#33DD66&l✔ 正版账号绑定成功'
+    - '&#8C8C8C▎ &#FFFFFF你已绑定 &#00E5FF%player% &#FFFFFF为正版账号'
+    - '&#8C8C8C▎ &#FFFFFF正版UUID: &#8C8C8C%real_uuid%'
+    - '&#8C8C8C▎ &#FFFFFF绑定时间: &#8C8C8C%bind_time% &#8C8C8C(%bind_state%)'
+    - '&#8C8C8C▎ &#FFFFFF绑定状态: %bound% &#8C8C8C| 主服标识: %status%'
+    - '&#8C8C8C▎ &#8C8C8C以后进入主服会自动显示正版标识, 无需重复认证'
+    - '&#00E5FF&m                                                  &r'
+
+  sound: 'ENTITY_PLAYER_LEVELUP'   # 留空则不播放；支持 entity.player.levelup 写法
+  sound-volume: 1.0
+  sound-pitch: 1.2
+```
+
+可用占位符：
+
+| 占位符 | 说明 |
+|---|---|
+| `%player%` | 本次绑定的 ID |
+| `%real_uuid%` | 正版原生 UUID |
+| `%uuid%` | 正版 UUID（离线玩家为离线 UUID） |
+| `%current_name%` | 当前绑定昵称 |
+| `%previous_name%` | 换绑前的旧 ID（无则 `-`） |
+| `%bind_time%` | 绑定时间 |
+| `%bind_state%` | 首次绑定 / 换绑 / 刷新认证 |
+| `%first_bind%` / `%renamed%` | `true` / `false` |
+| `%status%` | 主服会显示的状态（`✔正版`） |
+| `%bound%` | 绑定状态（`✔已绑定`） |
+| `%expire_in%` / `%names%` | 有效期剩余 / 昵称链 |
+
+另外支持按场景覆盖文案：`messages-new`（首次绑定）、`messages-renamed`（换绑），
+留空则使用默认 `messages`。
+
+## 3.7 场景示例
 
 **TAB 前缀**
 
@@ -547,7 +651,28 @@ format: '%officialauth_status% &f%player% &7» &f{message}'
 %officialauth_bool% == true
 ```
 
-## 3.7 常见问题
+## 3.8 常见问题
+
+<details>
+<summary><b>「✔已绑定」和「✔正版」有什么区别？</b></summary>
+
+- `%officialauth_status%`：当前**是否享有正版标识**（过期、旧昵称都会变成 ✘离线）
+- `%officialauth_bound%`：这个账号**有没有绑定过**正版（已过期仍然显示 ✔已绑定）
+
+所以可以用它把「从没认证过的新玩家」和「认证过但暂时失效的老玩家」区分开。
+</details>
+
+<details>
+<summary><b>每次进正版服都会弹绑定成功提示吗？</b></summary>
+
+由 `bind-notify.mode` 控制：
+
+- `always`（默认）：每次成功认证都提示
+- `change`：只有首次绑定或改名换绑时提示
+- `once`：只有首次绑定时提示
+
+不想让正版服弹提示就设 `bind-notify.enabled: false`。
+</details>
 
 <details>
 <summary><b>需要定期回正版服重新认证吗？</b></summary>
@@ -603,11 +728,11 @@ format: '%officialauth_status% &f%player% &7» &f{message}'
 可以，`database.table-prefix` 支持字母、数字、下划线，插件会自动建表。
 </details>
 
-## 3.8 排错指南
+## 3.9 排错指南
 
 | 现象 | 排查方向 |
 |---|---|
-| 启动报 `未找到 MySQL 驱动` | 换 Paper，或在服务端 libs / shade 里加入 `mysql-connector-j` |
+| 启动报 `MySQL 驱动自动下载失败` | 服务器无法访问下载仓库：手动把 `mysql-connector-j-x.x.x.jar` 放进 `plugins/OfficialAuthentication/libs/`，或在 `database.driver.repositories` 换成可用镜像 |
 | 启动报 `数据库初始化失败` | 检查 host / port / 账号 / 密码 / 库名；改完执行 `/oauth reload` |
 | `/oauth status` 显示数据库 `未就绪` | 同上；确认 MySQL 允许该 IP 连接 |
 | 认证服玩家进服后数据库无记录 | 确认 `server.mode: AUTH`；确认 `features.auth-record: true`；开 `server.debug` 看日志 |
@@ -623,7 +748,7 @@ format: '%officialauth_status% &f%player% &7» &f{message}'
 
 ```bash
 mvn clean package
-# 产物：target/OfficialAuthentication-1.0.0.jar
+# 产物：target/OfficialAuthentication-1.2.0.jar
 ```
 
 依赖：
@@ -634,7 +759,9 @@ mvn clean package
 | `me.clip:placeholderapi` | 2.11.6 | provided |
 
 - Java 21，UTF-8 编码
-- 不 shade 任何第三方库；MySQL 驱动由 Paper 的 `libraries` 机制在运行时下载
+- 不 shade 任何第三方库；MySQL 驱动获取顺序：
+  1. 服务端已有的驱动（Paper 的 `libraries` / 手动放入服务端）→ 走 `DriverManager`
+  2. 插件自行下载或 `plugins/OfficialAuthentication/libs/` 下的驱动 → 用独立类加载器直接连接
 - 连接池为内置轻量实现（`SimpleConnectionPool`），无额外依赖
 
 热重载：`/oauth reload`（配置、功能开关、指令注册、连接池参数变化时自动重建连接池）
@@ -674,6 +801,27 @@ OfficialAuthentication/
             ├── PlaceholderValues.java / ColorUtil.java / TimeUtil.java
             └── Msg.java / Console.java / PapiBridge.java
 ```
+
+---
+
+## 更新日志
+
+### 1.2.0
+
+- **Spigot 等不支持 `libraries` 的服务端也能自动使用 MySQL 驱动**：找不到驱动时自动从镜像下载到
+  `plugins/OfficialAuthentication/libs/` 并用独立类加载器加载；也支持手动把驱动丢进该目录（离线环境）
+- 新增**绑定状态**占位符：`%officialauth_bound%`（`✔已绑定` / `✘未绑定`）、`%officialauth_isbound%`（true/false）
+- 新增**正版认证服绑定成功提示**：屏幕中央标题 `✔正版账号绑定成功` + 聊天栏详细提示 + 可选音效
+  - 触发时机可配：`always` / `change`（首次或换绑）/ `once`
+  - 支持 `messages-new` / `messages-renamed` 场景化文案
+- 旧 ID 默认按离线处理（`placeholder.legacy-as-offline: true`）
+- 认证有效期默认关闭（`auth.expiry-enabled: false`），绑定一次永久有效
+- 占位符文案改为 emoji + 加粗样式（如 `✔正版`、`✘离线`）
+
+### 1.0.0
+
+- 首个版本：双模式（AUTH / MAIN）、账号-身份链、MySQL 存储、
+  PAPI 占位符、缓存与定时清理、`/zb` 与 `/oauth` 指令
 
 ---
 

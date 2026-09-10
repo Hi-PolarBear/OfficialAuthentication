@@ -4,6 +4,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -16,6 +17,17 @@ import java.util.StringJoiner;
  * 配置模块：读取并缓存 config.yml 的所有设置。
  */
 public final class AuthConfig {
+
+    /** 配置里 bind-notify.messages 缺失时的内置兜底文案 */
+    private static final List<String> DEFAULT_BIND_MESSAGES = Collections.unmodifiableList(java.util.Arrays.asList(
+            "&#00E5FF&m                                                  &r",
+            "&#33DD66&l✔ 正版账号绑定成功",
+            "&#8C8C8C▎ &#FFFFFF你已绑定 &#00E5FF%player% &#FFFFFF为正版账号",
+            "&#8C8C8C▎ &#FFFFFF正版UUID: &#8C8C8C%real_uuid%",
+            "&#8C8C8C▎ &#FFFFFF绑定时间: &#8C8C8C%bind_time%",
+            "&#8C8C8C▎ &#FFFFFF绑定状态: %bound% &#8C8C8C| 主服标识: %status%",
+            "&#8C8C8C▎ &#8C8C8C此后进入主服会自动显示正版标识, 无需重复认证",
+            "&#00E5FF&m                                                  &r"));
 
     private final JavaPlugin plugin;
 
@@ -35,6 +47,14 @@ public final class AuthConfig {
     public int connectionTimeoutMs = 5000;
     public String extraParams = "";
     public boolean createTablesOnStart = true;
+
+    // ---------- MySQL 驱动自动加载 ----------
+    public boolean driverAutoDownload = true;
+    public String driverVersion = "8.4.0";
+    public List<String> driverRepositories = new ArrayList<>(Arrays.asList(
+            "https://maven.aliyun.com/repository/public",
+            "https://repo1.maven.org/maven2"));
+    public int driverTimeoutMs = 15000;
 
     // ---------- 认证 ----------
     public double expireDays = 30D;
@@ -78,6 +98,8 @@ public final class AuthConfig {
     public String textFormer = "&#8C8C8C&l✘旧昵称";
     public String textOffline = "&#9E9E9E&l✘离线";
     public String textPending = "&#FFD700&l…查询中";
+    public String textBound = "&#33DD66&l✔已绑定";
+    public String textUnbound = "&#9E9E9E&l✘未绑定";
     public String boolTrue = "true";
     public String boolFalse = "false";
     public String dateFormat = "yyyy-MM-dd HH:mm:ss";
@@ -94,6 +116,19 @@ public final class AuthConfig {
     public String msgCleanup = "&#00E5FF清理完成, 受影响记录: &#FFFFFF%count% &#00E5FF条。";
     public String msgMainReadOnly = "&#FF5555当前是主服模式(只读), 禁止写入。";
     public List<String> msgHelp = Collections.emptyList();
+
+    // ---------- 认证成功提示(仅正版认证服) ----------
+    public boolean bindNotifyEnabled = true;
+    public String bindNotifyMode = "always";
+    public String bindTitle = "&#33DD66&l✔正版账号绑定成功";
+    public String bindSubtitle = "&#FFFFFF%player% &8· &7主服将显示 %status%";
+    public int bindFadeIn = 10;
+    public int bindStay = 50;
+    public int bindFadeOut = 10;
+    public String bindSound = "ENTITY_PLAYER_LEVELUP";
+    public float bindSoundVolume = 1.0F;
+    public float bindSoundPitch = 1.2F;
+    private final Map<String, List<String>> bindMessages = new HashMap<>();
 
     // ---------- /zb 指令 ----------
     public boolean zbEnabled = true;
@@ -129,6 +164,19 @@ public final class AuthConfig {
         connectionTimeoutMs = Math.max(500, c.getInt("database.connection-timeout-ms", 5000));
         extraParams = trim(c.getString("database.extra-params", ""));
         createTablesOnStart = c.getBoolean("database.create-tables-on-start", true);
+
+        driverAutoDownload = c.getBoolean("database.driver.auto-download", true);
+        driverVersion = c.getString("database.driver.version", "8.4.0");
+        driverTimeoutMs = Math.max(3000, c.getInt("database.driver.timeout-ms", 15000));
+        List<String> repositories = new ArrayList<>();
+        for (String repository : c.getStringList("database.driver.repositories")) {
+            if (repository != null && !repository.trim().isEmpty()) {
+                repositories.add(repository.trim());
+            }
+        }
+        if (!repositories.isEmpty()) {
+            driverRepositories = Collections.unmodifiableList(repositories);
+        }
 
         expireDays = c.getDouble("auth.expire-days", 30D);
         if (expireDays <= 0D) {
@@ -172,6 +220,8 @@ public final class AuthConfig {
         historyRetainDays = Math.max(0, c.getInt("cleanup.history-retain-days", 180));
 
         legacyAsOffline = c.getBoolean("placeholder.legacy-as-offline", true);
+        textBound = c.getString("placeholder.bound", textBound);
+        textUnbound = c.getString("placeholder.unbound", textUnbound);
         textPremium = c.getString("placeholder.premium", textPremium);
         textExpired = c.getString("placeholder.expired", textExpired);
         textFormer = c.getString("placeholder.former", textFormer);
@@ -180,6 +230,25 @@ public final class AuthConfig {
         boolTrue = c.getString("placeholder.true-value", "true");
         boolFalse = c.getString("placeholder.false-value", "false");
         dateFormat = c.getString("placeholder.date-format", "yyyy-MM-dd HH:mm:ss");
+
+        bindNotifyEnabled = c.getBoolean("bind-notify.enabled", true);
+        bindNotifyMode = c.getString("bind-notify.mode", "always").trim().toLowerCase(Locale.ROOT);
+        bindTitle = c.getString("bind-notify.title", bindTitle);
+        bindSubtitle = c.getString("bind-notify.subtitle", bindSubtitle);
+        bindFadeIn = Math.max(0, c.getInt("bind-notify.fade-in", 10));
+        bindStay = Math.max(1, c.getInt("bind-notify.stay", 50));
+        bindFadeOut = Math.max(0, c.getInt("bind-notify.fade-out", 10));
+        bindSound = c.getString("bind-notify.sound", bindSound);
+        bindSoundVolume = (float) c.getDouble("bind-notify.sound-volume", 1.0D);
+        bindSoundPitch = (float) c.getDouble("bind-notify.sound-pitch", 1.2D);
+
+        bindMessages.clear();
+        bindMessages.put("default", filterEmpty(c.getStringList("bind-notify.messages")));
+        bindMessages.put("new", filterEmpty(c.getStringList("bind-notify.messages-new")));
+        bindMessages.put("renamed", filterEmpty(c.getStringList("bind-notify.messages-renamed")));
+        if (bindMessages.get("default").isEmpty()) {
+            bindMessages.put("default", DEFAULT_BIND_MESSAGES);
+        }
 
         msgPrefix = c.getString("messages.prefix", msgPrefix);
         msgNoPermission = c.getString("messages.no-permission", msgNoPermission);
@@ -267,6 +336,44 @@ public final class AuthConfig {
             }
         }
         return joiner.length() == 0 ? "&a无" : joiner.toString();
+    }
+
+    /**
+     * 是否应该发送绑定成功提示。
+     * mode: always = 每次认证都提示 / change = 首次绑定或换绑 / once = 仅首次绑定
+     */
+    public boolean shouldNotifyBind(boolean firstBind, boolean renamed) {
+        if (!bindNotifyEnabled) {
+            return false;
+        }
+        switch (bindNotifyMode) {
+            case "once":
+                return firstBind;
+            case "change":
+                return firstBind || renamed;
+            default:
+                return true;
+        }
+    }
+
+    /**
+     * 取认证成功时应该发送的聊天消息：换绑 > 首次绑定 > 默认。
+     */
+    public List<String> bindMessagesFor(boolean firstBind, boolean renamed) {
+        if (renamed) {
+            List<String> renamedLines = bindMessages.get("renamed");
+            if (renamedLines != null && !renamedLines.isEmpty()) {
+                return renamedLines;
+            }
+        }
+        if (firstBind) {
+            List<String> newLines = bindMessages.get("new");
+            if (newLines != null && !newLines.isEmpty()) {
+                return newLines;
+            }
+        }
+        List<String> defaults = bindMessages.get("default");
+        return defaults == null || defaults.isEmpty() ? DEFAULT_BIND_MESSAGES : defaults;
     }
 
     /**

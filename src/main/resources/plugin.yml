@@ -9,8 +9,9 @@ load: POSTWORLD
 authors: [ Nice_Leo_ ]
 softdepend: [ PlaceholderAPI ]
 
-# Paper 服务端会自动下载 MySQL 驱动, 无需自己打包
-# Spigot / 其他端请把 mysql-connector-j 放进服务端 libraries 目录, 或自行 shade
+# Paper 支持 libraries, 会用它自动下载 MySQL 驱动
+# Spigot / 其他不支持 libraries 的服务端无需额外操作:
+# 插件会自己把 mysql-connector-j 下载到 plugins/OfficialAuthentication/libs/ 并加载
 libraries:
   - com.mysql:mysql-connector-j:8.4.0
 

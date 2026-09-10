@@ -98,6 +98,15 @@ public final class OfficialAuthExpansion extends PlaceholderExpansion {
                 return PlaceholderValues.boolText(config, result);
             case "known":
                 return loading && result == null ? config.boolFalse : PlaceholderValues.knownText(config, result);
+            case "bound":
+            case "isbound":
+            case "is_bound":
+            case "bind":
+            case "bind_status":
+                return PlaceholderValues.boundText(config, result);
+            case "bound_bool":
+            case "isbound_bool":
+                return PlaceholderValues.boundBoolText(config, result);
             case "real_uuid":
             case "realuuid":
                 return PlaceholderValues.realUuid(config, result);

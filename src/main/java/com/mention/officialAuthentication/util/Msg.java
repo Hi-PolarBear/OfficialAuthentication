@@ -7,11 +7,28 @@ import org.bukkit.entity.Player;
 import java.util.Map;
 
 /**
- * 消息发送工具：先替换本地占位符，再（可选）交给 PAPI，最后上色。
+ * 消息发送工具：先交给 PlaceholderAPI（未安装则跳过），再替换本地占位符，最后上色。
  */
 public final class Msg {
 
     private Msg() {
+    }
+
+    /**
+     * 格式化文本（不发送）：PAPI -> 本地占位符 -> 颜色代码。
+     *
+     * @param viewer 若不为 null 则解析该玩家可见的 PAPI 占位符
+     */
+    public static String format(Player viewer, String text, Map<String, String> values) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        String out = text;
+        if (viewer != null) {
+            out = PapiBridge.set(viewer, out);
+        }
+        out = apply(out, values);
+        return ColorUtil.color(out);
     }
 
     public static void raw(CommandSender sender, String text, Map<String, String> values) {
@@ -22,25 +39,19 @@ public final class Msg {
         if (sender == null || text == null || text.isEmpty()) {
             return;
         }
-        String out = apply(text, values);
-        if (applyPapi && sender instanceof Player) {
-            out = PapiBridge.set((Player) sender, out);
-        }
-        sender.sendMessage(ColorUtil.color(out));
+        Player viewer = applyPapi && sender instanceof Player ? (Player) sender : null;
+        sender.sendMessage(format(viewer, text, values));
     }
 
     /**
      * 带配置前缀的管理员消息。
      */
     public static void prefixed(CommandSender sender, AuthConfig config, String text, Map<String, String> values) {
-        if (text == null || text.isEmpty()) {
+        if (sender == null || text == null || text.isEmpty()) {
             return;
         }
-        String out = apply(text, values);
-        if (sender instanceof Player) {
-            out = PapiBridge.set((Player) sender, out);
-        }
-        sender.sendMessage(ColorUtil.color(config.msgPrefix + out));
+        Player viewer = sender instanceof Player ? (Player) sender : null;
+        sender.sendMessage(format(viewer, config.msgPrefix + text, values));
     }
 
     public static void simple(CommandSender sender, AuthConfig config, String text) {
