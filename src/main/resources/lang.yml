@@ -1,0 +1,141 @@
+# ============================================================
+#  lang.yml  ——  插件输出的所有文字
+# ============================================================
+#  颜色写法(可混用):
+#    &#RRGGBB   十六进制真彩, 例: &#00E5FF
+#    #RRGGBB    同上(不带 &)
+#    &a &c &6   传统 Bukkit 原生颜色码 (&0-&f)
+#    &l &o &n &m &k &r  加粗 / 斜体 / 下划线 / 删除线 / 随机 / 重置
+#
+#  开关类设置不在这里, 在 config.yml
+#  占位符显示内容 (✔正版 / ✘离线 等) 在 placeholders.yml
+# ============================================================
+
+# ============================================================
+#  控制台启动横幅 (开关: config.yml 的 console)
+# ============================================================
+console:
+  # 一行一条, 可用变量:
+  #   {version} {server} {mode} {mode_desc} {online_mode}
+  #   {database} {database_addr} {expire} {papi} {zb} {prefix} {threads}
+  # 另外也可选使用(默认不显示):
+  #   {features} 已启用功能列表 / {disabled} 已关闭功能列表
+  banner-lines:
+    - '&#00E5FF============================================================'
+    - '&#00E5FF&l  OfficialAuthentication &r&#8C8C8Cv{version}   &#FFFFFF正版认证 · 主服识别'
+    - '&#8C8C8C  服务器: &#00E5FF{server} &#8C8C8C| 运行模式: &#00E5FF{mode} &8({mode_desc})'
+    - '&#8C8C8C  online-mode: &#00E5FF{online_mode} &#8C8C8C| 数据库: &#00E5FF{database} &#8C8C8C({database_addr})'
+    - '&#8C8C8C  认证有效期: {expire} &#8C8C8C| PlaceholderAPI: {papi} &#8C8C8C| /zb 指令: {zb}'
+    - '&#00E5FF============================================================'
+
+# ============================================================
+#  通用消息
+# ============================================================
+messages:
+  # 指令反馈前缀
+  prefix: '&#00E5FF&l正版认证 &8» &r'
+  no-permission: '&#FF5555你没有权限执行该指令。'
+  player-only: '&#FF5555该指令只能由玩家执行。'
+  reload: '&#00E5FF配置已重载 &#8C8C8C(当前模式: &#FFFFFF%mode%&#8C8C8C)'
+  db-error: '&#FF5555数据库操作失败: &#FFFFFF%error%'
+  not-found: '&#FF5555找不到玩家 &#FFFFFF%player% &#FF5555的认证记录。'
+  unlink-success: '&#00E5FF已解除 &#FFFFFF%player% &#00E5FF的正版绑定。'
+  unlink-failed: '&#FF5555解除失败, 该昵称没有绑定正版身份。'
+  cleanup: '&#00E5FF清理完成, 受影响记录: &#FFFFFF%count% &#00E5FF条。'
+  main-read-only: '&#FF5555当前是主服模式(只读), 禁止写入。请到正版认证服执行, 或把 auth.allow-main-write 设为 true'
+  # 参数用法提示, %label% = 玩家实际输入的指令名, %sub% = 子指令
+  usage: '&c用法: /%label% %sub% <玩家>'
+  # /oauth help
+  help:
+    - '&#00E5FF&m        &r &#00E5FF&l正版认证指令帮助 &m        '
+    - '&#00E5FF▎ &#FFFFFF/%label% status &#8C8C8C- 查看运行状态'
+    - '&#00E5FF▎ &#FFFFFF/%label% info <玩家> &#8C8C8C- 查询认证信息'
+    - '&#00E5FF▎ &#FFFFFF/%label% history <玩家> &#8C8C8C- 查看改名历史'
+    - '&#00E5FF▎ &#FFFFFF/%label% unlink <玩家> &#8C8C8C- 解除正版绑定'
+    - '&#00E5FF▎ &#FFFFFF/%label% cleanup &#8C8C8C- 立即执行清理'
+    - '&#00E5FF▎ &#FFFFFF/%label% reload &#8C8C8C- 重载配置'
+
+# ============================================================
+#  /zb 指令 (开关部分在 config.yml 的 command 段)
+# ============================================================
+command:
+  # 指令描述(显示在指令列表里)
+  description: '查看正版认证状态'
+
+  # 默认聊天提示, 一行一条, 空行自动忽略
+  # 可用占位符:
+  #   %player%        被查询玩家名            %status%       状态(带颜色, ✔正版/✘离线)
+  #   %bool%          true/false(是否正版)     %known%        是否有认证记录
+  #   %bound%         绑定状态(✔已绑定)        %is_bound%     绑定状态 true/false
+  #   %real_uuid%     正版原生 UUID           %uuid%         正版或离线 UUID
+  #   %offline_uuid%  该昵称的离线 UUID        %current_name% 该正版身份当前昵称
+  #   %last_auth%     最后认证时间            %first_auth%   首次认证时间
+  #   %expire_in%     剩余有效期              %expire_days%  剩余天数
+  #   %names%         昵称链                  %names_count%  昵称数量
+  #   %mode%          AUTH / MAIN             %error%        错误信息
+  # 如果查询的是自己, 消息里的 PAPI 占位符(如 %officialauth_status%)也会被解析
+  messages:
+    - '&#00E5FF&m        &r &#00E5FF&l正版认证信息 &m        '
+    - '&#00E5FF▎ &#FFFFFF玩家: &#00E5FF%player%'
+    - '&#00E5FF▎ &#FFFFFF状态: %status%'
+    - '&#00E5FF▎ &#FFFFFF绑定: %bound%'
+    - '&#00E5FF▎ &#FFFFFF正版身份: &#00E5FF%current_name%'
+    - '&#00E5FF▎ &#FFFFFF正版UUID: &#8C8C8C%real_uuid%'
+    - '&#00E5FF▎ &#FFFFFF最后认证: &#8C8C8C%last_auth% &#8C8C8C(&#00E5FF%expire_in%&#8C8C8C 后过期)'
+    - '&#00E5FF▎ &#FFFFFF历史昵称: &#8C8C8C%names%'
+    - '&#FFB300▎ &#FFB300还没认证? 进入正版认证服自动完成认证'
+
+  # 可选: 按状态覆盖上面的内容, 留空(或删掉)则使用默认 messages
+  # 状态: premium(正版) / expired(已过期) / former(旧昵称) / offline(离线)
+  #
+  # messages-premium:
+  #   - '&#33DD66&l你已认证正版 &#8C8C8C(身份: %current_name%)'
+  #   - '&#8C8C8C到期时间剩余 &#FFFFFF%expire_in%'
+  #
+  # messages-offline:
+  #   - '&#9E9E9E你还没有完成正版认证'
+  #   - '&#FFB300进入正版认证服即可自动认证'
+
+# ============================================================
+#  正版认证服: 认证(绑定)成功提示 (开关部分在 config.yml 的 bind-notify 段)
+# ============================================================
+bind-notify:
+  # 屏幕中央标题(横屏大字), 留空则不显示
+  title: '&#33DD66&l✔正版账号绑定成功'
+  # 副标题(标题下方小字), 留空则不显示
+  subtitle: '&#FFFFFF%player% &8· &7主服将显示 %status%'
+
+  # 聊天栏消息, 一行一条
+  # 可用占位符:
+  #   %player%        本次绑定的 ID          %real_uuid%     正版原生 UUID
+  #   %uuid%          正版 UUID              %current_name%  当前绑定昵称
+  #   %previous_name% 换绑前的旧 ID(无则 -)   %bind_time%     绑定时间
+  #   %bind_state%    首次绑定/换绑/刷新认证  %first_bind%    是否首次绑定
+  #   %renamed%       是否换绑               %status%        主服会显示的状态(✔正版)
+  #   %bound%         绑定状态(✔已绑定)      %expire_in%     有效期剩余
+  #   %names%         昵称链
+  #   以及 PlaceholderAPI 占位符(如 %officialauth_status%)
+  messages:
+    - '&#00E5FF&m                                                  &r'
+    - '&#33DD66&l✔ 正版账号绑定成功'
+    - '&#8C8C8C▎ &#FFFFFF你已绑定 &#00E5FF%player% &#FFFFFF为正版账号'
+    - '&#8C8C8C▎ &#FFFFFF正版UUID: &#8C8C8C%real_uuid%'
+    - '&#8C8C8C▎ &#FFFFFF绑定时间: &#8C8C8C%bind_time% &#8C8C8C(%bind_state%)'
+    - '&#8C8C8C▎ &#FFFFFF绑定状态: %bound% &#8C8C8C| 主服标识: %status%'
+    - '&#8C8C8C▎ &#8C8C8C以后进入主服会自动显示正版标识, 无需重复认证'
+    - '&#00E5FF&m                                                  &r'
+
+  # 可选: 首次绑定 / 换绑时使用不同文案(留空则用上面的 messages)
+  # messages-new:
+  #   - '&#00E5FF&m                                                  &r'
+  #   - '&#33DD66&l✔ 首次绑定成功'
+  #   - '&#8C8C8C▎ &#FFFFFF欢迎 &#00E5FF%player%&#FFFFFF, 你已成为正版玩家'
+  #   - '&#8C8C8C▎ &#FFFFFF正版UUID: &#8C8C8C%real_uuid%'
+  #   - '&#00E5FF&m                                                  &r'
+  #
+  # messages-renamed:
+  #   - '&#00E5FF&m                                                  &r'
+  #   - '&#33DD66&l✔ 换绑成功'
+  #   - '&#8C8C8C▎ &#FFFFFF旧 ID: &#8C8C8C%previous_name% &8-> &#FFFFFF新 ID: &#00E5FF%player%'
+  #   - '&#8C8C8C▎ &#8C8C8C旧 ID 已变为离线, 请使用新 ID 游玩'
+  #   - '&#00E5FF&m                                                  &r'

@@ -1,5 +1,4 @@
-<img src="https://raw.githubusercontent.com/Hi-PolarBear/OfficialAuthentication/refs/heads/main/OfficialAuthentication.png" alt="OfficialAuthentication">
-  
+# OfficialAuthentication
 
 > 主服离线模式（`online-mode: false`）也能**精准识别正版玩家**的解决方案。
 
@@ -84,6 +83,7 @@ Minecraft 服务端 `online-mode: false` 时不会向微软验证账号，所有
 - **三级缓存 + 定时清理**：正版/离线/错误分别设 TTL，退服清缓存，定时清历史流水
 - **数据源唯一可信**：只有正版服能写库，主服强制只读（连清理、解绑命令都拒绝）
 - **功能总开关**：有效期、身份链、缓存、识别、PAPI、指令、清理……任意单独开关
+- **配置三文件分离**：`config.yml` 只管开关与连接，`lang.yml` 放插件输出的文字，`placeholders.yml` 放占位符显示内容（文件顶部附带完整占位符列表）
 - **彩色控制台启动横幅**：支持 `&#RRGGBB` 十六进制，自动转终端 ANSI
 - **占位符文案自由配置**：默认 `&#33DD66&l✔正版` / `&#9E9E9E&l✘离线`，支持 emoji
 
@@ -91,7 +91,7 @@ Minecraft 服务端 `online-mode: false` 时不会向微软验证账号，所有
 
 | 项目 | 要求 |
 |---|---|
-| 服务端 | Paper / Spigot 1.21+ |
+| 服务端 | Paper / Spigot 1.21+（推荐 Paper，可自动下载 MySQL 驱动） |
 | Java | 21 |
 | 数据库 | MySQL 5.7+ / MariaDB 10.2+ |
 | 前置插件 | PlaceholderAPI 2.11+（主服必需，认证服可选） |
@@ -112,11 +112,11 @@ Minecraft 服务端 `online-mode: false` 时不会向微软验证账号，所有
 
 ```
                     ┌──────────────────┐
-                    │      玩家        │
+                    │      玩家         │
                     └───┬──────────┬───┘
       ① 进正版服（微软官方鉴权）   ③ 进主服（离线）
                         │          │
-┌───────────────────────▼───┐  ┌────▼─────────────────────────────┐
+┌───────────────────────▼──┐  ┌────▼─────────────────────────────┐
 │  正版认证服  AUTH          │  │  主服  MAIN                       │
 │  online-mode: true        │  │  online-mode: false               │
 │  server.mode: AUTH        │  │  server.mode: MAIN                │
@@ -124,7 +124,7 @@ Minecraft 服务端 `online-mode: false` 时不会向微软验证账号，所有
 │  玩家成功进入              │  │  登录前异步预查询                  │
 │   ↓ 异步                  │  │   ↓ 按小写昵称查库（只读）         │
 │  取 real_uuid + 昵称      │  │  结果写入内存缓存                  │
-└──────────┬───────────────┘  └────┬──────────────────────────────┘
+└──────────┬────────────────┘  └────┬──────────────────────────────┘
            │ ② 覆盖更新（唯一写入口）   │ ④ 读取
            ▼                        ▼
    ┌────────────────────────────────────────────────┐
@@ -296,22 +296,20 @@ sequenceDiagram
 
 1. 从 [Releases](../../releases) 下载 `OfficialAuthentication-x.x.x.jar`
 2. 放进**正版认证服**和**主服**两边的 `plugins/` 目录
-3. 两边的 `config.yml` 填**同一个数据库**配置
+3. 两边的 `config.yml` 填**同一个数据库**配置（配置拆成 3 个文件，见 [3.2](#32-配置速查)）
 4. 正版认证服：`server.mode: AUTH`；主服：`server.mode: MAIN`
 5. 确认 `server.properties`：认证服 `online-mode=true`，主服 `online-mode=false`
 6. 装好 `PlaceholderAPI`（主服必需）
 7. 重启服务端
 
-启动成功后控制台会打印彩色横幅：
+启动成功后控制台会打印彩色横幅（横幅内容在 `lang.yml`）：
 
 ```
 ============================================================
-  OfficialAuthentication v1.2.0   正版认证 · 主服识别
+  OfficialAuthentication v1.3.0   正版认证 · 主服识别
   服务器: Paper 1.21.11 | 运行模式: AUTH (正版认证服 · 唯一写库)
   online-mode: true | 数据库: 已连接 (127.0.0.1:3306/minecraft)
   认证有效期: 永久有效(不过期) | PlaceholderAPI: 已加载 | /zb 指令: /zb
-  已启用: 正版认证写库, 身份链改名追踪, 旧昵称失效, 主服识别查询, ...
-  已关闭: 认证有效期校验
 ============================================================
 ```
 
@@ -360,6 +358,16 @@ database:
 - [ ] 主服执行 `/oauth info <你的ID>` 显示 `✔正版`
 
 ## 3.2 配置速查
+
+插件把配置拆成 **3 个文件**，各管一件事，均支持 `&#RRGGBB` 十六进制与 `&a` `&l` 等 Bukkit 原生颜色代码：
+
+| 文件 | 作用 | 内容 |
+|---|---|---|
+| **`config.yml`** | 主配置（**开关**与连接） | `features` 功能开关、数据库、认证/缓存、清理、`/zb` 与绑定提示的开关、控制台开关 |
+| **`lang.yml`** | 语言文件（**插件输出的文字**） | 指令提示语、`/zb` 聊天内容、绑定成功提示、控制台启动横幅 |
+| **`placeholders.yml`** | 占位符文件（**占位符显示内容**） | `✔正版` / `✘离线` / `✔已绑定` 等文案，并附带完整可用占位符列表 |
+
+> 升级插件不会覆盖你改过的文件；三个文件改完执行 `/oauth reload` 即可生效（横幅也会重新打印）。
 
 ### server
 
@@ -422,6 +430,7 @@ auth:
 | `auth-record` | true | 正版服不再写库（等于不认证） |
 | `name-chain` | true | 关闭身份链：改名直接删掉旧昵称记录 |
 | `legacy-name-invalidate` | true | 关闭后改名，旧 ID 依然显示正版 |
+| `legacy-name-offline` | true | 关闭后旧 ID 会显示 `placeholders.yml` 里的 `status.former` 文案，并带出原正版 UUID / 认证时间 / 昵称链 |
 | `main-recognition` | true | 主服完全不查库，占位符与 `/zb` 一律离线 |
 | `login-pre-query` | true | 不做登录前预查询（进服后首次查询才加载） |
 | `cache` | true | 不使用缓存，每次请求都查库 |
@@ -442,11 +451,11 @@ auth:
 - `false`（默认）：认证一次永久正版；`%officialauth_expire_in%` 输出「永久」，`expire_days` 输出 `-`
 - `true`：超过 `expire-days` 天未再进正版服 → 显示「已过期」、`bool` 为 false，需要重新进一次正版服刷新
 
-### 旧 ID 的处理方式（`placeholder` 段）
+### 旧 ID 的处理方式（`features.legacy-name-offline`）
 
 ```yaml
-placeholder:
-  legacy-as-offline: true   # 默认: 旧 ID 完全按离线处理, 不泄露原身份信息
+features:
+  legacy-name-offline: true   # 默认: 旧 ID 完全按离线处理, 不泄露原身份信息
 ```
 
 ## 3.4 指令
@@ -476,14 +485,25 @@ placeholder:
   | `%names%` / `%names_count%` | 昵称链 / 数量 |
   | `%mode%` / `%error%` | `AUTH`·`MAIN` / 错误信息 |
 
-配置示例：
+配置示例（开关在 `config.yml`，文案在 `lang.yml`）：
 
 ```yaml
+# ---------- config.yml ----------
 command:
-  names: [ 'zb' ]
+  names: [ 'zb', 'zhengban' ]      # 指令名
+  permission: 'officialauth.zb'    # 使用权限
+  permission-required: false       # false = 所有人可用
+  others-permission: 'officialauth.zb.others'
+```
+
+```yaml
+# ---------- lang.yml ----------
+command:
+  description: '查看正版认证状态'
   messages:
     - '&#00E5FF&m        &r &#00E5FF&l正版认证信息 &m        '
     - '&#00E5FF▎ &#FFFFFF状态: %status%'
+    - '&#00E5FF▎ &#FFFFFF绑定: %bound%'
     - '&#00E5FF▎ &#FFFFFF正版身份: &#00E5FF%current_name%'
     - '&#8C8C8C▎ &#FFFFFF最后认证: %last_auth%'
   messages-premium:
@@ -530,7 +550,7 @@ command:
 | `%officialauth_uuid%` | 正版 UUID；离线玩家返回离线 UUID |
 | `%officialauth_offline_uuid%` | 该昵称计算的离线 UUID |
 | `%officialauth_current_name%` | 该正版身份当前昵称 |
-| `%officialauth_last_auth%` | 最后认证时间（`placeholder.date-format`） |
+| `%officialauth_last_auth%` | 最后认证时间（`placeholders.yml` 的 `date-format`） |
 | `%officialauth_last_auth_raw%` | 最后认证时间戳 |
 | `%officialauth_first_auth%` | 首次认证时间 |
 | `%officialauth_expire_in%` | 剩余有效期（关闭有效期时输出「永久」） |
@@ -539,9 +559,29 @@ command:
 | `%officialauth_names_count%` | 昵称数量 |
 | `%officialauth_mode%` | 当前服务端角色 `AUTH` / `MAIN` |
 
-### 颜色与 emoji
+### 占位符文案与颜色（`placeholders.yml`）
 
-所有可配置文本（占位符文案、`/zb` 消息、`messages`、启动横幅）都支持三套写法，可混用：
+占位符显示内容全部集中在 **`placeholders.yml`**，该文件顶部还附带了**完整可用占位符列表**（可直接当手册看）。
+
+```yaml
+# ---------- placeholders.yml ----------
+status:
+  premium: '&#33DD66&l✔正版'      # %officialauth_status%
+  expired: '&#FFAA00&l✘已过期'
+  former:  '&#8C8C8C&l✘旧昵称'    # 仅 features.legacy-name-offline: false 时用到
+  offline: '&#9E9E9E&l✘离线'
+  pending: '&#FFD700&l…查询中'
+  bound:   '&#33DD66&l✔已绑定'    # %officialauth_bound%
+  unbound: '&#9E9E9E&l✘未绑定'
+
+boolean:
+  true-value: 'true'
+  false-value: 'false'
+
+date-format: 'yyyy-MM-dd HH:mm:ss'
+```
+
+颜色写法（三个配置文件通用，可混用）：
 
 | 写法 | 例子 |
 |---|---|
@@ -549,18 +589,7 @@ command:
 | 传统 `&` 格式码 | `&l` 加粗 `&o` 斜体 `&n` 下划线 `&m` 删除线 `&k` 随机 `&r` 重置 |
 | 十六进制 | `&#33DD66` 或 `#33DD66` |
 
-emoji 直接写在配置里即可：
-
-```yaml
-placeholder:
-  premium: '&#33DD66&l✔正版'      # ✔正版（整段加粗）
-  expired: '&#FFAA00&l✘已过期'
-  former:  '&#8C8C8C&l✘旧昵称'
-  offline: '&#9E9E9E&l✘离线'
-  pending: '&#FFD700&l…查询中'
-  bound:   '&#33DD66&l✔已绑定'    # %officialauth_bound%
-  unbound: '&#9E9E9E&l✘未绑定'
-```
+emoji 直接写在配置里即可（如上面的 `✔` `✘`）。
 
 > 若某个插件不兼容 `§x§R§R§G§G§B§B` 旧版十六进制形式，把文案换成 `&a&l✔正版` 即可。
 > 若客户端字体显示不出 emoji，可换成 `√` `×` 或纯文字。
@@ -574,17 +603,25 @@ placeholder:
 3. **音效**（可关闭）
 
 ```yaml
+# ---------- config.yml（开关） ----------
 bind-notify:
   enabled: true
   # always = 每次成功认证都提示 / change = 首次绑定或换绑 / once = 仅首次绑定
   mode: always
-
-  # 屏幕中央标题，留空不显示
-  title: '&#33DD66&l✔正版账号绑定成功'
-  subtitle: '&#FFFFFF%player% &8· &7主服将显示 %status%'
   fade-in: 10     # 淡入 tick (20 tick = 1 秒)
   stay: 50        # 停留 tick
   fade-out: 10    # 淡出 tick
+  sound: 'ENTITY_PLAYER_LEVELUP'   # 留空则不播放；支持 entity.player.levelup 写法
+  sound-volume: 1.0
+  sound-pitch: 1.2
+```
+
+```yaml
+# ---------- lang.yml（文案） ----------
+bind-notify:
+  # 屏幕中央标题，留空不显示
+  title: '&#33DD66&l✔正版账号绑定成功'
+  subtitle: '&#FFFFFF%player% &8· &7主服将显示 %status%'
 
   # 聊天栏消息，一行一条
   messages:
@@ -596,10 +633,6 @@ bind-notify:
     - '&#8C8C8C▎ &#FFFFFF绑定状态: %bound% &#8C8C8C| 主服标识: %status%'
     - '&#8C8C8C▎ &#8C8C8C以后进入主服会自动显示正版标识, 无需重复认证'
     - '&#00E5FF&m                                                  &r'
-
-  sound: 'ENTITY_PLAYER_LEVELUP'   # 留空则不播放；支持 entity.player.levelup 写法
-  sound-volume: 1.0
-  sound-pitch: 1.2
 ```
 
 可用占位符：
@@ -684,9 +717,9 @@ format: '%officialauth_status% &f%player% &7» &f{message}'
 <details>
 <summary><b>玩家改名后为什么旧 ID 显示离线？</b></summary>
 
-这是设计行为：旧 ID 默认完全按离线处理（`placeholder.legacy-as-offline: true`），
+这是设计行为：旧 ID 默认完全按离线处理（`features.legacy-name-offline: true`），
 不暴露原正版 UUID、认证时间和昵称链，避免旧 ID 被拿来冒用。
-想恢复「旧昵称」标签：设 `legacy-as-offline: false`。
+想恢复「旧昵称」标签：设 `legacy-name-offline: false`。
 两种模式下 `/oauth info <旧ID>` 都能看到真实状态。
 </details>
 
@@ -776,34 +809,67 @@ OfficialAuthentication/
 └── src/main/
     ├── resources/
     │   ├── plugin.yml              # 指令、权限、libraries(MySQL 驱动)
-    │   └── config.yml              # 全部配置（含中文注释）
+    │   ├── config.yml              # 主配置: 功能开关 / 数据库 / 缓存 / 清理
+    │   ├── lang.yml                # 语言文件: 指令消息 / 绑定提示 / 启动横幅
+    │   └── placeholders.yml        # 占位符文案 + 可用占位符列表
     └── java/com/mention/officialAuthentication/
         ├── OfficialAuthentication.java   # 主类：双模式装配 / 热重载 / 定时任务 / 启动横幅
         ├── config/
-        │   ├── AuthConfig.java           # 配置模块（含功能开关）
+        │   ├── AuthConfig.java           # 配置模块(读取 config / lang / placeholders 三文件)
         │   └── ServerMode.java           # AUTH / MAIN
         ├── db/
-        │   ├── DatabaseManager.java      # 连接池管理 + 自动建表
+        │   ├── DatabaseManager.java      # 驱动解析 + 连接池 + 自动建表
+        │   ├── LibraryLoader.java        # MySQL 驱动自动下载/加载(Spigot 兼容)
+        │   ├── ConnectionFactory.java    # 连接创建策略
         │   ├── SimpleConnectionPool.java # 内置轻量连接池
         │   └── AuthRepository.java       # 全部 SQL（异步、事务、身份链）
         ├── cache/
         │   ├── AuthCache.java            # 三级 TTL 缓存
         │   └── AuthService.java          # 缓存优先 + 并发查询去重
         ├── listener/
-        │   └── PlayerListener.java       # 认证写库 / 预查询 / 退服清缓存
+        │   └── PlayerListener.java       # 认证写库 / 绑定提示 / 预查询 / 退服清缓存
         ├── papi/
         │   └── OfficialAuthExpansion.java# %officialauth_xxx% 占位符
         ├── command/
         │   ├── OfficialAuthCommand.java  # /oauth 管理指令
         │   └── ZbCommand.java            # /zb 玩家提示（可配置文案）
         ├── model/
-        │   ├── AuthResult.java / AuthStatus.java / NameEntry.java
+        │   ├── AuthResult.java / AuthStatus.java / NameEntry.java / BindResult.java
         └── util/
             ├── PlaceholderValues.java / ColorUtil.java / TimeUtil.java
-            └── Msg.java / Console.java / PapiBridge.java
+            └── Msg.java / Console.java / PapiBridge.java / SoundPlayer.java
 ```
 
 ---
+
+## 更新日志
+
+### 1.3.0
+
+- **配置拆分三文件**（各管一件事，升级不覆盖你改过的文件）：
+  - `config.yml` —— 主配置，只放**开关**与连接（features / database / auth / cleanup / console）
+  - `lang.yml` —— **语言文件**，所有插件输出的文字（指令消息、`/zb` 内容、绑定提示、启动横幅）
+  - `placeholders.yml` —— **占位符文件**，占位符显示内容（`✔正版` / `✘离线` / `✔已绑定`），顶部附带**可用占位符列表**
+- 旧昵称按离线处理的开关更名为 `features.legacy-name-offline`（统一收到功能开关里）
+- 控制台启动横幅不再列出「已启用 / 已关闭」的功能项（`/oauth status` 仍可查看）
+- 新增可配置的用法提示 `messages.usage`
+
+### 1.2.0
+
+- **Spigot 等不支持 `libraries` 的服务端也能自动使用 MySQL 驱动**：找不到驱动时自动从镜像下载到
+  `plugins/OfficialAuthentication/libs/` 并用独立类加载器加载；也支持手动把驱动丢进该目录（离线环境）
+- 新增**绑定状态**占位符：`%officialauth_bound%`（`✔已绑定` / `✘未绑定`）、`%officialauth_isbound%`（true/false）
+- 新增**正版认证服绑定成功提示**：屏幕中央标题 `✔正版账号绑定成功` + 聊天栏详细提示 + 可选音效
+  - 触发时机可配：`always` / `change`（首次或换绑）/ `once`
+  - 支持 `messages-new` / `messages-renamed` 场景化文案
+- 旧 ID 默认按离线处理
+- 认证有效期默认关闭（`auth.expiry-enabled: false`），绑定一次永久有效
+- 占位符文案改为 emoji + 加粗样式（如 `✔正版`、`✘离线`）
+
+### 1.0.0
+
+- 首个版本：双模式（AUTH / MAIN）、账号-身份链、MySQL 存储、
+  PAPI 占位符、缓存与定时清理、`/zb` 与 `/oauth` 指令
 
 ---
 

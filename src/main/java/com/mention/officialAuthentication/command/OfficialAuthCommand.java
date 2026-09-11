@@ -98,7 +98,7 @@ public final class OfficialAuthCommand implements CommandExecutor, TabCompleter 
         if (args.length >= 2) {
             return true;
         }
-        Msg.simple(sender, config(), "&c用法: /" + label + " " + sub + " <玩家>");
+        Msg.prefixed(sender, config(), config().msgUsage, valuesOf("label", label, "sub", sub));
         return false;
     }
 
@@ -211,6 +211,13 @@ public final class OfficialAuthCommand implements CommandExecutor, TabCompleter 
     private static Map<String, String> valuesOf(String key, String value) {
         Map<String, String> map = new HashMap<>();
         map.put(key, value);
+        return map;
+    }
+
+    private static Map<String, String> valuesOf(String key1, String value1, String key2, String value2) {
+        Map<String, String> map = new HashMap<>();
+        map.put(key1, value1);
+        map.put(key2, value2);
         return map;
     }
 

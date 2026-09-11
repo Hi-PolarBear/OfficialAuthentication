@@ -1,22 +1,22 @@
 # ============================================================
-#  OfficialAuthentication
-#  正版子服鉴权 + 主服识别展示 (账号-身份链版)
+#  OfficialAuthentication v1.3.0  ——  主配置文件
 # ============================================================
+#  本文件只放「开关」与「连接」相关的设置。
+#
+#    插件文字输出 (提示语/指令消息/启动横幅)  -> lang.yml
+#    占位符显示内容 (✔正版 / ✘离线 等)       -> placeholders.yml
+#
 #  安装步骤:
-#   1. 把本插件放进「正版认证服」(online-mode: true) 和「主服」(online-mode: false)
-#   2. 两份服务端的 database 段必须填成同一个数据库
-#   3. 认证服把 server.mode 改成 AUTH, 主服保持 MAIN
-#
-#  颜色写法: 支持 &#RRGGBB 十六进制, 支持 &a &l &m 等传统颜色/格式代码
-#  例: '&#00E5FF&l正版 &f玩家'
-#
-#  功能总开关集中在 features 段, 可以单独关闭任意功能(例如认证有效期)
+#    1. 插件放进「正版认证服」与「主服」两边的 plugins/
+#    2. 两边的 database 段填同一个数据库
+#    3. 正版认证服 server.mode: AUTH ; 主服 server.mode: MAIN
+#    4. 认证服 online-mode: true ; 主服 online-mode: false
 # ============================================================
 
 server:
   # 服务端角色:
-  #   AUTH = 正版认证服 (online-mode: true) —— 全服唯一可写入数据库的一端
-  #   MAIN = 主服     (online-mode: false) —— 只读数据库, 只做识别与展示
+  #   AUTH = 正版认证服 (online-mode: true)  —— 全服唯一可写库的一端
+  #   MAIN = 主服       (online-mode: false) —— 只读数据库, 只做识别展示
   mode: MAIN
   # 数据库操作线程数
   db-threads: 2
@@ -24,20 +24,23 @@ server:
   debug: false
 
 # ============================================================
-#  功能总开关: false = 关闭该功能(改完执行 /oauth reload 即可生效)
+#  功能开关: false = 关闭该功能(改完执行 /oauth reload 即可生效)
 # ============================================================
 features:
-  # ---- 正版认证服(AUTH) ----
+  # ---------- 正版认证服(AUTH) ----------
   # 玩家进入正版服后自动认证写库
   auth-record: true
-  # 身份链 / 改名追踪: 关闭后改名不再保留历史, 同一个账号可能出现多条记录(不推荐)
+  # 身份链 / 改名追踪: 关闭后改名不保留历史(同一个账号可能出现多条记录, 不推荐)
   name-chain: true
-  # 认证有效期开关已统一到 auth 段: auth.expiry-enabled
-  # 旧昵称自动失效: false = 玩家改名后旧 ID 依然显示正版(不推荐)
+  # 改名后旧 ID 自动失效: 关闭后旧 ID 依然显示正版(不推荐)
   legacy-name-invalidate: true
+  # 旧 ID 在占位符里直接当作离线玩家:
+  #   true  = 旧 ID 与从未认证过的玩家表现完全一致(不暴露原正版信息, 推荐)
+  #   false = 旧 ID 显示为 placeholders.yml 里的 status.former 文案并带出原身份信息
+  legacy-name-offline: true
 
-  # ---- 主服(MAIN) ----
-  # 主服识别查询总开关: false = 完全不查数据库, 占位符与 /zb 统一返回离线
+  # ---------- 主服(MAIN) ----------
+  # 主服识别查询总开关: false = 完全不查库, 占位符与 /zb 一律返回离线
   main-recognition: true
   # 玩家登录前异步预查询(进服瞬间就有数据)
   login-pre-query: true
@@ -48,39 +51,17 @@ features:
   # 查询时同时取出改名历史(关闭可省一次 SQL)
   name-history-fetch: true
 
-  # ---- 其它 ----
-  # PlaceholderAPI 占位符注册
+  # ---------- 其它 ----------
+  # 注册 PlaceholderAPI 占位符
   placeholder-api: true
-  # /zb 指令(名称与内容见下方 command 段)
+  # 注册 /zb 指令(名称与权限见下方 command 段, 文案在 lang.yml)
   zb-command: true
-  # 定时清理过期认证数据(详细设置见 cleanup 段)
+  # 定时清理过期认证数据(详细设置见下方 cleanup 段)
   cleanup: true
 
 # ============================================================
-#  控制台启动打印(使用终端可识别的 ANSI 颜色)
+#  数据库
 # ============================================================
-console:
-  # 是否打印启动横幅
-  banner: true
-  # 是否使用 ANSI 颜色代码
-  # 宝塔 / Win10+ CMD / Windows Terminal / Linux 终端都支持;
-  # 若启动后看到 ←[38;2;...m 这类乱码, 把这里改成 false 即可自动去色
-  ansi: true
-  # 横幅内容, 一行一条, 空行忽略
-  # 可用占位符:
-  #   {version} {server} {mode} {mode_desc} {online_mode} {database} {database_addr}
-  #   {expire} {papi} {zb} {features} {disabled} {prefix} {threads}
-  # 颜色: &#RRGGBB 十六进制 / &a &l 等传统代码
-  banner-lines:
-    - '&#00E5FF============================================================'
-    - '&#00E5FF&l  OfficialAuthentication &r&#8C8C8Cv{version}   &#FFFFFF正版认证 · 主服识别'
-    - '&#8C8C8C  服务器: &#00E5FF{server} &#8C8C8C| 运行模式: &#00E5FF{mode} &8({mode_desc})'
-    - '&#8C8C8C  online-mode: &#00E5FF{online_mode} &#8C8C8C| 数据库: &#00E5FF{database} &#8C8C8C({database_addr})'
-    - '&#8C8C8C  认证有效期: {expire} &#8C8C8C| PlaceholderAPI: {papi} &#8C8C8C| /zb 指令: {zb}'
-    - '&#8C8C8C  已启用: &f{features}'
-    - '&#8C8C8C  已关闭: &e{disabled}'
-    - '&#00E5FF============================================================'
-
 database:
   host: 127.0.0.1
   port: 3306
@@ -99,34 +80,32 @@ database:
   create-tables-on-start: true
 
   # ---------- MySQL 驱动自动加载 ----------
-  # Paper 会通过 plugin.yml 的 libraries 自动下载驱动;
-  # 如果服务端里找不到驱动(例如 Spigot), 插件会自动下载到
-  # plugins/OfficialAuthentication/libs/ 并加载, 无需手动改服务端。
+  # Paper 会用 plugin.yml 的 libraries 自动下载驱动;
+  # Spigot 等不支持 libraries 的服务端, 插件会自己下载到
+  # plugins/OfficialAuthentication/libs/ 并用独立类加载器加载, 无需手动改服务端。
   driver:
     # 是否允许自动下载(仅当服务端里找不到驱动时才下载)
     auto-download: true
     # 驱动版本
     version: '8.4.0'
-    # 下载仓库, 按顺序尝试直到成功; 也可以加自己的私服仓库
+    # 下载仓库, 按顺序尝试直到成功
     repositories:
       - 'https://maven.aliyun.com/repository/public'
       - 'https://repo1.maven.org/maven2'
     # 下载超时(毫秒)
     timeout-ms: 15000
-    # 提示: 也可以自己把一个 mysql-connector-j-x.x.x.jar 丢进 libs 目录,
-    #       插件会自动加载该目录下的所有 jar, 无需联网
+    # 提示: 也可以手动把 mysql-connector-j-x.x.x.jar 丢进 libs 目录(插件会加载该目录下所有 jar)
 
+# ============================================================
+#  认证 / 缓存
+# ============================================================
 auth:
   # 【开关】认证有效期 / 过期重新认证
   #   false (默认, 推荐) = 绑定一次永久有效:
-  #       在正版认证服认证一次后就不用再回来刷新了;
-  #       以后换了 ID, 用新 ID 进一次正版认证服 → 新 ID 自动绑定,
-  #       旧 ID 自动变成离线(不再占用正版身份)
-  #   true  = 启用过期判定: 超过 expire-days 天没再进正版认证服就显示「已过期」,
-  #       必须重新进一次正版服刷新认证
+  #       认证一次后不用再回来刷新; 换 ID 后新 ID 自动绑定, 旧 ID 自动变离线
+  #   true = 启用过期判定: 超过 expire-days 天没再进正版服就显示「已过期」
   expiry-enabled: false
-  # 认证有效期(天), 支持小数, 0.5 = 12 小时
-  # 仅在 expiry-enabled: true 时生效
+  # 认证有效期(天), 支持小数, 0.5 = 12 小时; 仅 expiry-enabled: true 时生效
   expire-days: 30
   # 单条 SQL 超时(秒)
   query-timeout-seconds: 5
@@ -141,16 +120,17 @@ auth:
   # 缓存清理间隔(分钟)
   cache-purge-minutes: 10
 
-  # ---------- 身份链 / 改名追踪 ----------
+  # ---------- 身份链 ----------
   # 历史昵称展示最大条数
   max-history-names: 8
   # 主服是否允许写入(默认 false, 保证数据源唯一可信)
   allow-main-write: false
-  # 注: 是否缓存 / 退服清缓存 / 登录预查询 / 取改名历史
-  #     这些开关统一在文件顶部的 features 段里设置
 
+# ============================================================
+#  定时清理 (总开关: features.cleanup)
+# ============================================================
 cleanup:
-  # 执行间隔(分钟); 总开关在 features.cleanup
+  # 执行间隔(分钟)
   interval-minutes: 60
   # false = 仅把过期身份的昵称标记为「非当前」(推荐, 保留改名历史)
   # true  = 直接删除过期身份的记录
@@ -161,7 +141,20 @@ cleanup:
   history-retain-days: 180
 
 # ============================================================
-#  正版认证服: 认证(绑定)成功时的提示
+#  /zb 指令 (开关部分; 文案在 lang.yml 的 command 段)
+# ============================================================
+command:
+  # 指令名, 可以写多个(第一个为主名), 和别的插件冲突时自动跳过
+  names: [ 'zb', 'zhengban', 'renzheng' ]
+  # 使用权限
+  permission: 'officialauth.zb'
+  # true = 必须拥有上面的权限才能用; false = 所有人可用
+  permission-required: false
+  # 查询其他玩家所需权限
+  others-permission: 'officialauth.zb.others'
+
+# ============================================================
+#  认证成功提示 (开关部分; 文案在 lang.yml 的 bind-notify 段)
 #  仅当 server.mode: AUTH 且本次写库成功时触发
 # ============================================================
 bind-notify:
@@ -171,165 +164,21 @@ bind-notify:
   #   change = 首次绑定 或 换绑(改名) 时才提示
   #   once   = 只在首次绑定时提示
   mode: always
-
-  # ---------- 屏幕中央标题(横屏大字) ----------
-  # 留空则不显示; 可用下面 messages 里的所有占位符
-  title: '&#33DD66&l✔正版账号绑定成功'
-  # 副标题(标题下方小字), 留空则不显示
-  subtitle: '&#FFFFFF%player% &8· &7主服将显示 %status%'
-  # 显示时间(tick, 20 tick = 1 秒): 淡入 / 停留 / 淡出
+  # 屏幕中央标题显示时间(tick, 20 tick = 1 秒): 淡入 / 停留 / 淡出
   fade-in: 10
   stay: 50
   fade-out: 10
-
-  # ---------- 聊天栏提示 ----------
-  # 一行一条, 空行忽略; 颜色支持 &#RRGGBB 与 &a &l 等
-  # 可用占位符:
-  #   %player%        本次绑定的 ID
-  #   %real_uuid%     正版原生 UUID          %uuid%        正版 UUID(离线的为离线 UUID)
-  #   %current_name%  当前绑定昵称          %previous_name% 换绑前的旧 ID(无则 -)
-  #   %status%        主服会显示的状态(✔正版)  %bound%       绑定状态(✔已绑定)
-  #   %bind_time%     绑定时间              %bind_state%   首次绑定/换绑/刷新认证
-  #   %first_bind%    true/false(是否首次)  %renamed%      true/false(是否换绑)
-  #   %expire_in%     有效期剩余            %names%        昵称链
-  #   以及 PlaceholderAPI 占位符(如 %officialauth_status%)
-  messages:
-    - '&#00E5FF&m                                                  &r'
-    - '&#33DD66&l✔ 正版账号绑定成功'
-    - '&#8C8C8C▎ &#FFFFFF你已绑定 &#00E5FF%player% &#FFFFFF为正版账号'
-    - '&#8C8C8C▎ &#FFFFFF正版UUID: &#8C8C8C%real_uuid%'
-    - '&#8C8C8C▎ &#FFFFFF绑定时间: &#8C8C8C%bind_time% &#8C8C8C(%bind_state%)'
-    - '&#8C8C8C▎ &#FFFFFF绑定状态: %bound% &#8C8C8C| 主服标识: %status%'
-    - '&#8C8C8C▎ &#8C8C8C以后进入主服会自动显示正版标识, 无需重复认证'
-    - '&#00E5FF&m                                                  &r'
-
-  # 可选: 首次绑定 / 换绑时使用不同文案(留空则用上面的 messages)
-  # messages-new:
-  #   - '&#00E5FF&m                                                  &r'
-  #   - '&#33DD66&l✔ 首次绑定成功'
-  #   - '&#8C8C8C▎ &#FFFFFF欢迎 &#00E5FF%player%&#FFFFFF, 你已成为正版玩家'
-  #   - '&#8C8C8C▎ &#FFFFFF正版UUID: &#8C8C8C%real_uuid%'
-  #   - '&#00E5FF&m                                                  &r'
-  #
-  # messages-renamed:
-  #   - '&#00E5FF&m                                                  &r'
-  #   - '&#33DD66&l✔ 换绑成功'
-  #   - '&#8C8C8C▎ &#FFFFFF旧 ID: &#8C8C8C%previous_name% &8-> &#FFFFFF新 ID: &#00E5FF%player%'
-  #   - '&#8C8C8C▎ &#8C8C8C旧 ID 已变为离线, 请使用新 ID 游玩'
-  #   - '&#00E5FF&m                                                  &r'
-
-  # 音效(留空则不播放), 支持 entity.player.levelup 或 ENTITY_PLAYER_LEVELUP 两种写法
+  # 音效(留空则不播放), 支持 entity.player.levelup 或 ENTITY_PLAYER_LEVELUP 写法
   sound: 'ENTITY_PLAYER_LEVELUP'
   sound-volume: 1.0
   sound-pitch: 1.2
 
-# ---------------- PAPI 占位符文案 ----------------
-placeholder:
-  # 【开关】玩家改名后, 旧 ID 是否直接当作「离线玩家」处理
-  #   true (默认) = 旧 ID 的占位符全部按离线输出:
-  #                 状态「离线」、%officialauth_bool% = false、known = false,
-  #                 real_uuid / current_name / last_auth / names 全部为空,
-  #                 不暴露任何原正版身份信息, /zb 也走离线提示
-  #   false       = 旧 ID 显示为下面的 former 文案, 并带出原身份信息
-  legacy-as-offline: true
-  # ---
-  # 说明: 占位符文案默认用 emoji 勾/叉 + 加粗字样, 可自由改成你喜欢的样子
-  #   常用 emoji: ✔ ✘ ✓ ✗ ✖ ★ ✦ ⚠ ⏳ ● ◆ ▎
-  #   如果客户端显示不出来(方框/空白), 可以换成 √ × 或者纯文字: '&a&l正版'
-  #   字体是否支持与客户端有关, 大多数中文客户端都没问题
-  # 已认证正版: emoji 勾 + 整段加粗, 显示为 ✔正版
-  # 想给 emoji 和文字分色 / 加空格可以自己拼, 例如 '&#33DD66✔ &l正版'
-  premium: '&#33DD66&l✔正版'
-  # 认证已过期: emoji 叉 (仅 auth.expiry-enabled: true 时会出现)
-  expired: '&#FFAA00&l✘已过期'
-  # 旧昵称(仅在 legacy-as-offline: false 时才会用到)
-  former: '&#8C8C8C&l✘旧昵称'
-  # 离线 / 未认证
-  offline: '&#9E9E9E&l✘离线'
-  # 正在查询
-  pending: '&#FFD700&l…查询中'
-  # 绑定状态 (%officialauth_bound%): 该昵称是否已绑定过正版账号
-  #   已过期也算「已绑定」; 从未认证过 / 旧昵称(按离线处理) 显示未绑定
-  bound: '&#33DD66&l✔已绑定'
-  unbound: '&#9E9E9E&l✘未绑定'
-  # 布尔占位符输出
-  true-value: 'true'
-  false-value: 'false'
-  # 时间格式
-  date-format: 'yyyy-MM-dd HH:mm:ss'
-
-# ---------------- 通用消息 ----------------
-messages:
-  prefix: '&#00E5FF&l正版认证 &8» &r'
-  no-permission: '&#FF5555你没有权限执行该指令。'
-  player-only: '&#FF5555该指令只能由玩家执行。'
-  reload: '&#00E5FF配置已重载 &#8C8C8C(当前模式: &#FFFFFF%mode%&#8C8C8C)'
-  db-error: '&#FF5555数据库操作失败: &#FFFFFF%error%'
-  not-found: '&#FF5555找不到玩家 &#FFFFFF%player% &#FF5555的认证记录。'
-  unlink-success: '&#00E5FF已解除 &#FFFFFF%player% &#00E5FF的正版绑定。'
-  unlink-failed: '&#FF5555解除失败, 该昵称没有绑定正版身份。'
-  cleanup: '&#00E5FF清理完成, 受影响记录: &#FFFFFF%count% &#00E5FF条。'
-  main-read-only: '&#FF5555当前是主服模式(只读), 禁止写入。请到正版认证服执行, 或把 auth.allow-main-write 设为 true'
-  help:
-    - '&#00E5FF&m        &r &#00E5FF&l正版认证指令帮助 &m        '
-    - '&#00E5FF▎ &#FFFFFF/%label% status &#8C8C8C- 查看运行状态与功能开关'
-    - '&#00E5FF▎ &#FFFFFF/%label% info <玩家> &#8C8C8C- 查询认证信息'
-    - '&#00E5FF▎ &#FFFFFF/%label% history <玩家> &#8C8C8C- 查看改名历史'
-    - '&#00E5FF▎ &#FFFFFF/%label% unlink <玩家> &#8C8C8C- 解除正版绑定'
-    - '&#00E5FF▎ &#FFFFFF/%label% cleanup &#8C8C8C- 立即执行清理'
-    - '&#00E5FF▎ &#FFFFFF/%label% reload &#8C8C8C- 重载配置'
-
-# ---------------- /zb 指令 ----------------
-command:
-  # 指令名, 可以写多个(第一个为主名), 和别的插件冲突时自动跳过
-  # 总开关在 features.zb-command
-  names: [ 'zb', 'zhengban', 'renzheng' ]
-  # 指令描述
-  description: '查看正版认证状态'
-  # 使用权限
-  permission: 'officialauth.zb'
-  # true = 必须拥有上面的权限才能用; false = 所有人可用
-  permission-required: false
-  # 查询其他玩家所需权限
-  others-permission: 'officialauth.zb.others'
-
-  # 默认提示内容(聊天框消息), 一行 = 一条消息, 空行自动忽略
-  # 可用占位符:
-  #   %player%        被查询玩家名
-  #   %status%        状态(带颜色, 由 placeholder 段控制)
-  #   %bool%          true / false
-  #   %known%         是否有认证记录 true / false
-  #   %real_uuid%     正版原生 UUID (离线玩家为空)
-  #   %uuid%          正版 UUID, 离线玩家则为离线 UUID
-  #   %offline_uuid%  该昵称的离线 UUID
-  #   %current_name%  该正版身份当前昵称
-  #   %last_auth%     最后认证时间
-  #   %first_auth%    首次认证时间
-  #   %expire_in%     距离过期还剩多久(关闭有效期校验时显示「永久」)
-  #   %expire_days%   距离过期还剩几天
-  #   %names%         该身份的全部昵称(当前在前)
-  #   %names_count%   昵称数量
-  #   %mode%          AUTH / MAIN
-  #   %error%         查询失败时的错误信息
-  # 另外: 如果使用者和被查询者是同一个人, 消息里的 PAPI 占位符
-  #       %officialauth_xxx% 也会被正常解析
-  messages:
-    - '&#00E5FF&m        &r &#00E5FF&l正版认证信息 &m        '
-    - '&#00E5FF▎ &#FFFFFF玩家: &#00E5FF%player%'
-    - '&#00E5FF▎ &#FFFFFF状态: %status%'
-    - '&#00E5FF▎ &#FFFFFF正版身份: &#00E5FF%current_name%'
-    - '&#00E5FF▎ &#FFFFFF正版UUID: &#8C8C8C%real_uuid%'
-    - '&#00E5FF▎ &#FFFFFF最后认证: &#8C8C8C%last_auth% &#8C8C8C(&#00E5FF%expire_in%&#8C8C8C 后过期)'
-    - '&#00E5FF▎ &#FFFFFF历史昵称: &#8C8C8C%names%'
-    - '&#FFB300▎ &#FFB300还没认证? 进入正版认证服自动完成认证'
-
-  # 可选: 按状态覆盖上面的内容, 留空(或删掉)则使用默认 messages
-  # 状态: premium(正版) / expired(已过期) / former(旧昵称) / offline(离线)
-  #
-  # messages-premium:
-  #   - '&#FFD700&l你已认证正版 &#8C8C8C(身份: %current_name%)'
-  #   - '&#8C8C8C到期时间剩余 &#FFFFFF%expire_in%'
-  #
-  # messages-offline:
-  #   - '&#9E9E9E你还没有完成正版认证'
-  #   - '&#FFB300进入正版认证服即可自动认证'
+# ============================================================
+#  控制台 (横幅内容在 lang.yml 的 console 段)
+# ============================================================
+console:
+  # 是否打印启动横幅
+  banner: true
+  # 是否使用终端 ANSI 颜色码
+  # 现代终端都支持; 若启动后看到 ←[38;2;...m 这类乱码, 改成 false 即可自动去色
+  ansi: true

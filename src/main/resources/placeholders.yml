@@ -1,0 +1,75 @@
+# ============================================================
+#  placeholders.yml  ——  占位符显示内容
+# ============================================================
+#  本文件只负责「占位符输出成什么文字」。
+#  相关开关在 config.yml:  features.legacy-name-offline / auth.expiry-enabled
+#  文字颜色支持 &#RRGGBB 十六进制 与 &a &l 等 Bukkit 原生颜色代码, emoji 可直接写。
+# ============================================================
+#
+#  ======================= 可用占位符一览 =======================
+#  标识符: officialauth      写法: %officialauth_xxx%
+#
+#  ---- 状态类 ----
+#    %officialauth_status%          状态文本 -> 下面的 status.*(✔正版 / ✘离线)
+#    %officialauth_bool%            是否正版: true / false
+#    %officialauth_ispremium%       同上
+#    %officialauth_bound%           绑定状态文本 -> status.bound / status.unbound
+#    %officialauth_isbound%         是否已绑定: true / false
+#    %officialauth_known%           数据库里是否存在该昵称的记录
+#
+#  ---- UUID 类 ----
+#    %officialauth_real_uuid%       正版原生 UUID(离线玩家为空)
+#    %officialauth_uuid%            正版 UUID; 离线玩家返回离线 UUID
+#    %officialauth_offline_uuid%    该昵称计算出的离线 UUID
+#
+#  ---- 身份类 ----
+#    %officialauth_current_name%    该正版身份当前昵称
+#    %officialauth_names%           昵称链(当前在前, 旧昵称带 "(旧)")
+#    %officialauth_names_count%     昵称数量
+#
+#  ---- 时间类 ----
+#    %officialauth_last_auth%       最后认证时间
+#    %officialauth_last_auth_raw%   最后认证时间戳
+#    %officialauth_first_auth%      首次认证时间
+#    %officialauth_expire_in%       剩余有效期(关闭有效期时输出「永久」)
+#    %officialauth_expire_days%     剩余天数
+#
+#  ---- 其它 ----
+#    %officialauth_mode%            当前服务端角色 AUTH / MAIN
+#
+#  ---- /zb 消息里可用的本地占位符(不需要装 PAPI) ----
+#    %player% %status% %bool% %known% %bound% %is_bound%
+#    %real_uuid% %uuid% %offline_uuid% %current_name%
+#    %last_auth% %first_auth% %expire_in% %expire_days%
+#    %names% %names_count% %mode% %error%
+#
+#  ---- 绑定成功提示(bind-notify)里可用的本地占位符 ----
+#    %player% %real_uuid% %uuid% %current_name% %previous_name%
+#    %bind_time% %bind_state% %first_bind% %renamed%
+#    %status% %bound% %expire_in% %names%
+# ============================================================
+
+# ---------------- 状态文案 ----------------
+status:
+  # 已认证正版
+  premium: '&#33DD66&l✔正版'
+  # 认证已过期(仅 auth.expiry-enabled: true 时会出现)
+  expired: '&#FFAA00&l✘已过期'
+  # 旧昵称(仅 features.legacy-name-offline: false 时才会用到)
+  former: '&#8C8C8C&l✘旧昵称'
+  # 离线 / 未认证
+  offline: '&#9E9E9E&l✘离线'
+  # 正在查询(异步查询尚未返回时)
+  pending: '&#FFD700&l…查询中'
+  # 绑定状态(%officialauth_bound%)
+  #   已过期也算「已绑定」; 从未认证 / 旧昵称(按离线处理)显示未绑定
+  bound: '&#33DD66&l✔已绑定'
+  unbound: '&#9E9E9E&l✘未绑定'
+
+# ---------------- 布尔占位符输出 ----------------
+boolean:
+  true-value: 'true'
+  false-value: 'false'
+
+# ---------------- 时间格式 ----------------
+date-format: 'yyyy-MM-dd HH:mm:ss'

@@ -1,6 +1,6 @@
 name: OfficialAuthentication
 description: 正版子服鉴权 + 主服识别展示 (账号-身份链版)
-version: '1.2.0'
+version: '1.3.0'
 
 main: com.mention.officialAuthentication.OfficialAuthentication
 api-version: '1.21'

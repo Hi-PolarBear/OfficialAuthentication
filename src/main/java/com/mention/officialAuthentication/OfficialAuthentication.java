@@ -292,9 +292,6 @@ public final class OfficialAuthentication extends JavaPlugin {
         if (mode.isMain() && !authConfig.allowMainWrite) {
             info("&#8C8C8C[正版认证] 主服为只读模式(数据源唯一可信): 所有写库操作都会被拒绝。");
         }
-        if (!authConfig.featureAuthExpiry) {
-            info("&#00E5FF[正版认证] &#FFFFFF认证有效期判定已关闭: &#8C8C8C绑定一次即永久有效, 无需重新认证; 换 ID 后新 ID 自动绑定, 旧 ID 变为离线。");
-        }
     }
 
     // =========================================================
@@ -320,9 +317,7 @@ public final class OfficialAuthentication extends JavaPlugin {
         registerPlaceholderApi();
         scheduleTasks();
         checkMode();
-        info("&#00E5FF[正版认证] &#FFFFFF配置已重载 &#8C8C8C| 模式: &f" + mode
-                + " &#8C8C8C| 已启用: &f" + authConfig.enabledFeatures()
-                + " &#8C8C8C| 已关闭: &c" + authConfig.disabledFeatures());
+        info("&#00E5FF[正版认证] &#FFFFFF配置已重载 &#8C8C8C| 模式: &f" + mode);
     }
 
     private String databaseSignature() {
