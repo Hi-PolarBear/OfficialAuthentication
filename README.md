@@ -1,4 +1,4 @@
-# OfficialAuthentication
+
 
 > 主服离线模式（`online-mode: false`）也能**精准识别正版玩家**的解决方案。
 
@@ -91,7 +91,7 @@ Minecraft 服务端 `online-mode: false` 时不会向微软验证账号，所有
 
 | 项目 | 要求 |
 |---|---|
-| 服务端 | Paper / Spigot 1.21+（推荐 Paper，可自动下载 MySQL 驱动） |
+| 服务端 | Paper / Spigot 1.21+ |
 | Java | 21 |
 | 数据库 | MySQL 5.7+ / MariaDB 10.2+ |
 | 前置插件 | PlaceholderAPI 2.11+（主服必需，认证服可选） |
@@ -842,34 +842,6 @@ OfficialAuthentication/
 
 ---
 
-## 更新日志
-
-### 1.3.0
-
-- **配置拆分三文件**（各管一件事，升级不覆盖你改过的文件）：
-  - `config.yml` —— 主配置，只放**开关**与连接（features / database / auth / cleanup / console）
-  - `lang.yml` —— **语言文件**，所有插件输出的文字（指令消息、`/zb` 内容、绑定提示、启动横幅）
-  - `placeholders.yml` —— **占位符文件**，占位符显示内容（`✔正版` / `✘离线` / `✔已绑定`），顶部附带**可用占位符列表**
-- 旧昵称按离线处理的开关更名为 `features.legacy-name-offline`（统一收到功能开关里）
-- 控制台启动横幅不再列出「已启用 / 已关闭」的功能项（`/oauth status` 仍可查看）
-- 新增可配置的用法提示 `messages.usage`
-
-### 1.2.0
-
-- **Spigot 等不支持 `libraries` 的服务端也能自动使用 MySQL 驱动**：找不到驱动时自动从镜像下载到
-  `plugins/OfficialAuthentication/libs/` 并用独立类加载器加载；也支持手动把驱动丢进该目录（离线环境）
-- 新增**绑定状态**占位符：`%officialauth_bound%`（`✔已绑定` / `✘未绑定`）、`%officialauth_isbound%`（true/false）
-- 新增**正版认证服绑定成功提示**：屏幕中央标题 `✔正版账号绑定成功` + 聊天栏详细提示 + 可选音效
-  - 触发时机可配：`always` / `change`（首次或换绑）/ `once`
-  - 支持 `messages-new` / `messages-renamed` 场景化文案
-- 旧 ID 默认按离线处理
-- 认证有效期默认关闭（`auth.expiry-enabled: false`），绑定一次永久有效
-- 占位符文案改为 emoji + 加粗样式（如 `✔正版`、`✘离线`）
-
-### 1.0.0
-
-- 首个版本：双模式（AUTH / MAIN）、账号-身份链、MySQL 存储、
-  PAPI 占位符、缓存与定时清理、`/zb` 与 `/oauth` 指令
 
 ---
 
