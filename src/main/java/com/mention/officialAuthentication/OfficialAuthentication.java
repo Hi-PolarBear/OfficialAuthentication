@@ -8,6 +8,7 @@ import com.mention.officialAuthentication.config.AuthConfig;
 import com.mention.officialAuthentication.config.ServerMode;
 import com.mention.officialAuthentication.db.AuthRepository;
 import com.mention.officialAuthentication.db.DatabaseManager;
+import com.mention.officialAuthentication.feature.NamePrefixService;
 import com.mention.officialAuthentication.listener.PlayerListener;
 import com.mention.officialAuthentication.papi.OfficialAuthExpansion;
 import com.mention.officialAuthentication.util.Console;
@@ -42,6 +43,7 @@ public final class OfficialAuthentication extends JavaPlugin {
     private AuthRepository repository;
     private AuthCache cache;
     private AuthService authService;
+    private NamePrefixService namePrefix;
     private ExecutorService dbExecutor;
     private OfficialAuthExpansion expansion;
     private BukkitTask cacheTask;
@@ -82,8 +84,9 @@ public final class OfficialAuthentication extends JavaPlugin {
         repository = new AuthRepository(this, authConfig, database, dbExecutor);
         cache = new AuthCache(authConfig);
         authService = new AuthService(authConfig, repository, cache);
+        namePrefix = new NamePrefixService(this, authConfig, authService);
 
-        getServer().getPluginManager().registerEvents(new PlayerListener(this, authConfig, authService, repository), this);
+        getServer().getPluginManager().registerEvents(new PlayerListener(this, authConfig, authService, repository, namePrefix), this);
 
         registerAdminCommand();
         registerZbCommands();
@@ -267,6 +270,9 @@ public final class OfficialAuthentication extends JavaPlugin {
                 repository.cleanup();
             }, period, period);
         }
+
+        // 【实验性】玩家名前缀刷新
+        namePrefix.start();
     }
 
     private void cancelTasks() {
@@ -277,6 +283,9 @@ public final class OfficialAuthentication extends JavaPlugin {
         if (cleanupTask != null) {
             cleanupTask.cancel();
             cleanupTask = null;
+        }
+        if (namePrefix != null) {
+            namePrefix.stop();
         }
     }
 

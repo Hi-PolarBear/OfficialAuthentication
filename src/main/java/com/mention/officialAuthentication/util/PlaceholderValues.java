@@ -47,7 +47,11 @@ public final class PlaceholderValues {
     /** 对外展示的状态文本（已应用旧昵称=离线 规则） */
     public static String statusText(AuthConfig config, AuthResult result, boolean loading) {
         if (result == null) {
-            return loading ? config.textPending : config.textOffline;
+            if (!loading) {
+                return config.textOffline;
+            }
+            // 静默刷新: 数据未就绪时输出为空, 不显示「查询中」
+            return config.featurePendingText ? config.textPending : "";
         }
         if (legacyAsOffline(config, result)) {
             return config.textOffline;

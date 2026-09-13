@@ -9,6 +9,7 @@ com\mention\officialAuthentication\cache\AuthService.class
 com\mention\officialAuthentication\command\ZbCommand.class
 com\mention\officialAuthentication\util\Console.class
 com\mention\officialAuthentication\cache\AuthCache$Entry.class
+com\mention\officialAuthentication\feature\NamePrefixService.class
 com\mention\officialAuthentication\cache\AuthCache.class
 com\mention\officialAuthentication\command\OfficialAuthCommand.class
 com\mention\officialAuthentication\model\NameEntry.class

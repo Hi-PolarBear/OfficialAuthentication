@@ -11,18 +11,25 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * 缓存模块：主服专用，避免同一个玩家反复查库。
  *
- * <p>正版结果缓存久一些；离线/未认证结果缓存短一些，这样玩家刚在正版服认证完，
- * 回到主服很快就能生效。</p>
+ * <p>每个结果有两个时间点：</p>
+ * <ul>
+ *     <li><b>freshUntil</b>：新鲜期，期内直接返回缓存，不查库</li>
+ *     <li><b>staleUntil</b>：兜底期，过期后仍保留旧值，
+ *         异步刷新期间先用旧值对外展示（例如「正版」不会闪成「查询中 / 离线」），
+ *         查询结果回来后覆盖为最新状态</li>
+ * </ul>
  */
 public final class AuthCache {
 
     private static final class Entry {
         private final AuthResult result;
-        private final long expiresAt;
+        private final long freshUntil;
+        private final long staleUntil;
 
-        private Entry(AuthResult result, long expiresAt) {
+        private Entry(AuthResult result, long freshUntil, long staleUntil) {
             this.result = result;
-            this.expiresAt = expiresAt;
+            this.freshUntil = freshUntil;
+            this.staleUntil = staleUntil;
         }
     }
 
@@ -37,7 +44,25 @@ public final class AuthCache {
         return name == null ? "" : name.toLowerCase(Locale.ROOT);
     }
 
+    /**
+     * 取「新鲜」结果：未过期直接返回，过期返回 null（但会保留旧值供刷新期间显示）。
+     */
     public AuthResult get(String name) {
+        if (!config.featureCache) {
+            return null;
+        }
+        Entry entry = entries.get(key(name));
+        if (entry == null) {
+            return null;
+        }
+        return System.currentTimeMillis() <= entry.freshUntil ? entry.result : null;
+    }
+
+    /**
+     * 取「上次已知」结果：即使已过新鲜期也能拿到，用于异步刷新期间不闪状态。
+     * 超过兜底期则彻底丢弃。
+     */
+    public AuthResult getStale(String name) {
         if (!config.featureCache) {
             return null;
         }
@@ -46,7 +71,7 @@ public final class AuthCache {
         if (entry == null) {
             return null;
         }
-        if (entry.expiresAt <= System.currentTimeMillis()) {
+        if (System.currentTimeMillis() > entry.staleUntil) {
             entries.remove(key, entry);
             return null;
         }
@@ -54,7 +79,7 @@ public final class AuthCache {
     }
 
     public void put(AuthResult result) {
-        if (result == null || !config.featureCache) {
+        if (result == null) {
             return;
         }
         long ttl;
@@ -65,7 +90,26 @@ public final class AuthCache {
         } else {
             ttl = config.cacheOfflineSeconds * 1000L;
         }
-        entries.put(key(result.getQueryName()), new Entry(result, System.currentTimeMillis() + ttl));
+        store(result, ttl);
+    }
+
+    /**
+     * 把某个结果继续当作「新鲜」保持一段时间（查询失败时冷却，避免频繁查库）。
+     */
+    public void hold(AuthResult result, long ttlMillis) {
+        if (result == null) {
+            return;
+        }
+        store(result, Math.max(1000L, ttlMillis));
+    }
+
+    private void store(AuthResult result, long ttlMillis) {
+        if (!config.featureCache) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        long stale = Math.max(ttlMillis, Math.max(0, config.cacheStaleSeconds) * 1000L);
+        entries.put(key(result.getQueryName()), new Entry(result, now + ttlMillis, now + stale));
     }
 
     public void invalidate(String name) {
@@ -87,6 +131,6 @@ public final class AuthCache {
             return;
         }
         long now = System.currentTimeMillis();
-        entries.entrySet().removeIf(entry -> entry.getValue().expiresAt <= now);
+        entries.entrySet().removeIf(entry -> entry.getValue().staleUntil <= now);
     }
 }

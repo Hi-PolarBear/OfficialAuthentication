@@ -76,6 +76,7 @@ public final class AuthConfig {
     public int cacheSeconds = 120;
     public int cacheOfflineSeconds = 20;
     public int cacheErrorSeconds = 10;
+    public int cacheStaleSeconds = 300;
     public int cachePurgeMinutes = 10;
     public boolean clearCacheOnQuit = true;
     public boolean preLoginLookup = true;
@@ -92,6 +93,16 @@ public final class AuthConfig {
     public boolean featureCache = true;
     public boolean featureNameHistoryFetch = true;
     public boolean featurePlaceholderApi = true;
+    public boolean featurePendingText = false;
+    public boolean featureNamePrefix = false;
+
+    // ---------- 【实验性】玩家名前缀 ----------
+    public boolean namePrefixTab = true;
+    public boolean namePrefixChat = true;
+    public boolean namePrefixSkipTeam = true;
+    public int namePrefixUpdateTicks = 20;
+    public String namePrefixTabText = "%status%&r";
+    public String namePrefixChatText = "%status%&r";
 
     // ---------- 控制台 ----------
     public boolean bannerEnabled = true;
@@ -137,8 +148,7 @@ public final class AuthConfig {
     public String bindNotifyMode = "always";
     public String bindTitle = "&#33DD66&l✔正版账号绑定成功";
     public String bindSubtitle = "&#FFFFFF%player% &8· &7主服将显示 %status%";
-    public int bindFadeIn = 10;
-    public int bindStay = 50;
+    public int bindFadeIn = 10;    public int bindStay = 50;
     public int bindFadeOut = 10;
     public String bindSound = "ENTITY_PLAYER_LEVELUP";
     public float bindSoundVolume = 1.0F;
@@ -205,6 +215,7 @@ public final class AuthConfig {
         cacheSeconds = Math.max(1, mainConf.getInt("auth.cache-seconds", 120));
         cacheOfflineSeconds = Math.max(1, mainConf.getInt("auth.cache-offline-seconds", 20));
         cacheErrorSeconds = Math.max(1, mainConf.getInt("auth.cache-error-seconds", 10));
+        cacheStaleSeconds = Math.max(0, mainConf.getInt("auth.cache-stale-seconds", 300));
         cachePurgeMinutes = Math.max(1, mainConf.getInt("auth.cache-purge-minutes", 10));
         maxHistoryNames = Math.max(1, mainConf.getInt("auth.max-history-names", 8));
         allowMainWrite = mainConf.getBoolean("auth.allow-main-write", false);
@@ -224,6 +235,8 @@ public final class AuthConfig {
         featureCache = mainConf.getBoolean("features.cache", true);
         clearCacheOnQuit = mainConf.getBoolean("features.cache-clear-on-quit", true);
         featureNameHistoryFetch = mainConf.getBoolean("features.name-history-fetch", true);
+        featurePendingText = mainConf.getBoolean("features.pending-text", false);
+        featureNamePrefix = mainConf.getBoolean("features.name-prefix", false);
         featurePlaceholderApi = mainConf.getBoolean("features.placeholder-api", true);
         zbEnabled = mainConf.getBoolean("features.zb-command", true);
         cleanupEnabled = mainConf.getBoolean("features.cleanup", true);
@@ -265,6 +278,11 @@ public final class AuthConfig {
         bindSoundVolume = (float) mainConf.getDouble("bind-notify.sound-volume", 1.0D);
         bindSoundPitch = (float) mainConf.getDouble("bind-notify.sound-pitch", 1.2D);
 
+        namePrefixTab = mainConf.getBoolean("name-prefix.tab", true);
+        namePrefixChat = mainConf.getBoolean("name-prefix.chat", true);
+        namePrefixSkipTeam = mainConf.getBoolean("name-prefix.skip-team-prefix", true);
+        namePrefixUpdateTicks = Math.max(1, mainConf.getInt("name-prefix.update-interval-ticks", 20));
+
         // ==================== placeholders.yml ====================
         textPremium = phConf.getString("status.premium", textPremium);
         textExpired = phConf.getString("status.expired", textExpired);
@@ -292,6 +310,9 @@ public final class AuthConfig {
         msgMainReadOnly = langConf.getString("messages.main-read-only", msgMainReadOnly);
         msgUsage = langConf.getString("messages.usage", msgUsage);
         msgHelp = new ArrayList<>(langConf.getStringList("messages.help"));
+
+        namePrefixTabText = langConf.getString("name-prefix.tab", namePrefixTabText);
+        namePrefixChatText = langConf.getString("name-prefix.chat", namePrefixChatText);
 
         zbDescription = langConf.getString("command.description", zbDescription);
         zbMessages.clear();
@@ -354,6 +375,8 @@ public final class AuthConfig {
         map.put("登录预查询", featureMainRecognition && preLoginLookup);
         map.put("结果缓存", featureCache);
         map.put("退服清缓存", featureCache && clearCacheOnQuit);
+        map.put("查询中提示", featurePendingText);
+        map.put("玩家名前缀(实验)", featureNamePrefix);
         map.put("改名历史查询", featureNameHistoryFetch);
         map.put("PAPI占位符", featurePlaceholderApi);
         map.put("/zb 指令", zbEnabled);

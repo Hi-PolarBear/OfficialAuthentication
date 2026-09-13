@@ -50,12 +50,20 @@ features:
   cache-clear-on-quit: true
   # 查询时同时取出改名历史(关闭可省一次 SQL)
   name-history-fetch: true
+  # 异步刷新期间是否显示「查询中」占位文案
+  #   false (默认) = 静默刷新: 数据还没回来时占位符输出为空, 不刷「查询中」
+  #   true         = 显示 placeholders.yml 里的 status.pending 文案
+  pending-text: false
 
   # ---------- 其它 ----------
   # 注册 PlaceholderAPI 占位符
   placeholder-api: true
   # 注册 /zb 指令(名称与权限见下方 command 段, 文案在 lang.yml)
   zb-command: true
+  # 【实验性】在聊天与 TAB 玩家列表的 ID 前追加正版/离线标识
+  #   只“追加”不覆盖: 其他插件或原版已有的前缀都会保留
+  #   文案在 lang.yml 的 name-prefix, 刷新间隔见下方 name-prefix 段
+  name-prefix: false
   # 定时清理过期认证数据(详细设置见下方 cleanup 段)
   cleanup: true
 
@@ -117,6 +125,10 @@ auth:
   cache-offline-seconds: 20
   # 查询失败结果缓存(秒), 防止数据库异常时疯狂重试
   cache-error-seconds: 10
+  # 旧值兼底期(秒): 缓存过期后保留旧结果,
+  # 异步刷新期间先继续显示上一次状态(例如一直显示 ✔正版 不闪「查询中」),
+  # 查询结果回来后立即覆盖; 超过该时长彻底丢弃
+  cache-stale-seconds: 300
   # 缓存清理间隔(分钟)
   cache-purge-minutes: 10
 
@@ -172,6 +184,22 @@ bind-notify:
   sound: 'ENTITY_PLAYER_LEVELUP'
   sound-volume: 1.0
   sound-pitch: 1.2
+
+# ============================================================
+#  【实验性】玩家名前缀 (总开关: features.name-prefix)
+#  在聊天与 TAB 列表的玩家 ID 前追加标识, 只追加不覆盖, 文案在 lang.yml
+# ============================================================
+name-prefix:
+  # 是否更新 TAB 玩家列表
+  tab: true
+  # 是否处理聊天消息(在发言者名字前追加)
+  chat: true
+  # 玩家已经有原版计分板团队前缀/后缀(例如 /team 加的称号)时:
+  #   true (默认) = 直接跳过, 原版前缀/聊天格式照旧显示(不会覆盖原版)
+  #   false       = 仍然追加我们的前缀
+  skip-team-prefix: true
+  # 刷新间隔(tick, 20 = 1 秒); 只在标识变化时才下发, 不会一直刷包
+  update-interval-ticks: 20
 
 # ============================================================
 #  控制台 (横幅内容在 lang.yml 的 console 段)

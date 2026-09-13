@@ -4,6 +4,7 @@ import com.mention.officialAuthentication.OfficialAuthentication;
 import com.mention.officialAuthentication.cache.AuthService;
 import com.mention.officialAuthentication.config.AuthConfig;
 import com.mention.officialAuthentication.db.AuthRepository;
+import com.mention.officialAuthentication.feature.NamePrefixService;
 import com.mention.officialAuthentication.model.AuthResult;
 import com.mention.officialAuthentication.model.AuthStatus;
 import com.mention.officialAuthentication.model.BindResult;
@@ -15,6 +16,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -36,13 +38,15 @@ public final class PlayerListener implements Listener {
     private final AuthConfig config;
     private final AuthService service;
     private final AuthRepository repository;
+    private final NamePrefixService namePrefix;
 
-    public PlayerListener(OfficialAuthentication plugin, AuthConfig config,
-                          AuthService service, AuthRepository repository) {
+    public PlayerListener(OfficialAuthentication plugin, AuthConfig config, AuthService service,
+                          AuthRepository repository, NamePrefixService namePrefix) {
         this.plugin = plugin;
         this.config = config;
         this.service = service;
         this.repository = repository;
+        this.namePrefix = namePrefix;
     }
 
     /**
@@ -81,6 +85,16 @@ public final class PlayerListener implements Listener {
             return;
         }
         service.resolveAsync(player.getName());
+        // 【实验性】玩家名前缀: 进服先按当前缓存刷一次, 后续由定时任务校正
+        namePrefix.update(player);
+    }
+
+    /**
+     * 【实验性】聊天: 只在发言者 ID 前追加标识, 不覆盖其他插件/原版的格式。
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onChat(AsyncPlayerChatEvent event) {
+        namePrefix.applyChatFormat(event);
     }
 
     /**
@@ -91,6 +105,7 @@ public final class PlayerListener implements Listener {
         if (config.clearCacheOnQuit) {
             service.invalidate(event.getPlayer().getName());
         }
+        namePrefix.forget(event.getPlayer());
     }
 
     // =========================================================

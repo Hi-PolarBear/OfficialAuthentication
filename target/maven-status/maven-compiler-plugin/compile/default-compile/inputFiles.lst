@@ -9,6 +9,7 @@ E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthenticatio
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\db\DatabaseManager.java
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\db\LibraryLoader.java
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\db\SimpleConnectionPool.java
+E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\feature\NamePrefixService.java
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\listener\PlayerListener.java
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\model\AuthResult.java
 E:\插件\OfficialAuthentication\src\main\java\com\mention\officialAuthentication\model\AuthStatus.java

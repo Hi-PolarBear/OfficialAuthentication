@@ -11,6 +11,7 @@
 #
 #  ---- 状态类 ----
 #    %officialauth_status%          状态文本 -> 下面的 status.*(✔正版 / ✘离线)
+#                                   数据未就绪时静默输出为空, 不会出现「查询中」
 #    %officialauth_bool%            是否正版: true / false
 #    %officialauth_ispremium%       同上
 #    %officialauth_bound%           绑定状态文本 -> status.bound / status.unbound
@@ -59,7 +60,9 @@ status:
   former: '&#8C8C8C&l✘旧昵称'
   # 离线 / 未认证
   offline: '&#9E9E9E&l✘离线'
-  # 正在查询(异步查询尚未返回时)
+  # 异步刷新期间（开关: config.yml 的 features.pending-text）
+  #   默认 false = 静默刷新: 数据没回来时占位符输出为空, 不显示「查询中」
+  #   改成 true 才会显示下面这段文案
   pending: '&#FFD700&l…查询中'
   # 绑定状态(%officialauth_bound%)
   #   已过期也算「已绑定」; 从未认证 / 旧昵称(按离线处理)显示未绑定

@@ -83,8 +83,9 @@ public final class OfficialAuthExpansion extends PlaceholderExpansion {
         AuthResult result = service.getCached(name);
         boolean loading = false;
         if (result == null) {
-            service.resolveAsync(name);
-            loading = true;
+            // 静默刷新: 刷新期间先沿用上次已知状态(正版依然显示正版), 数据回来后再确认
+            result = service.resolveForDisplay(name);
+            loading = result == null;
         }
 
         switch (param) {

@@ -20,11 +20,20 @@ public final class Msg {
      * @param viewer 若不为 null 则解析该玩家可见的 PAPI 占位符
      */
     public static String format(Player viewer, String text, Map<String, String> values) {
+        return format(viewer, text, values, true);
+    }
+
+    /**
+     * 格式化文本（不发送）。
+     *
+     * @param applyPapi 是否解析 PlaceholderAPI 占位符
+     */
+    public static String format(Player viewer, String text, Map<String, String> values, boolean applyPapi) {
         if (text == null || text.isEmpty()) {
             return "";
         }
         String out = text;
-        if (viewer != null) {
+        if (applyPapi && viewer != null) {
             out = PapiBridge.set(viewer, out);
         }
         out = apply(out, values);
